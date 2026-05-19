@@ -14,6 +14,10 @@ WP_APP_PASSWORD = os.environ["TOUSHI_WP_APP_PASSWORD"]
 
 # A8.net・もしもアフィリエイトのFX・証券口座リンク（承認後に差し替え）
 AFFILIATE_LINKS = {
+    "XServer VPS for FX プレミアム": "https://px.a8.net/svt/ejp?a8mat=4B3U75+805VVU+CO4+44UKYA",
+    "シンクラウドデスクトップ for FX": "https://px.a8.net/svt/ejp?a8mat=4B3U75+893DYI+5GDG+HV7V6",
+    "FXTF（ゴールデンウェイ・ジャパン）": "https://px.a8.net/svt/ejp?a8mat=4B3U75+89OTKA+48D0+6A4FM",
+    "シストレセレクト365（FX自動売買）": "https://px.a8.net/svt/ejp?a8mat=4B3U75+8BH4DM+34QW+BWVTE",
     "GMOクリック証券【FXneo】": "https://toushi-kenja.com",
     "SBI FXトレード": "https://toushi-kenja.com",
     "外為どっとコム": "https://toushi-kenja.com",
