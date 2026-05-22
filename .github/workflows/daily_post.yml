@@ -23,3 +23,24 @@ jobs:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           TOUSHI_WP_USERNAME: ${{ secrets.TOUSHI_WP_USERNAME }}
           TOUSHI_WP_APP_PASSWORD: ${{ secrets.TOUSHI_WP_APP_PASSWORD }}
+      - name: 投稿失敗メール通知
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: majiko2019@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "❌ 投資の賢者 自動投稿失敗アラート"
+          to: majiko2019@gmail.com
+          from: "自動化監視 <majiko2019@gmail.com>"
+          body: |
+            【投資の賢者】の自動投稿が失敗しました。
+
+            リポジトリ: ${{ github.repository }}
+            実行時刻: ${{ github.run_started_at }}
+            ワークフロー: ${{ github.workflow }}
+            詳細ログ: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            毎朝8時の自動監視エージェントが修復を試みます。
+            急ぎの場合はClaude Codeにてご確認ください。
