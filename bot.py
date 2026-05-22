@@ -1,11 +1,22 @@
 import anthropic
 import httpx
 import xmlrpc.client
+import ssl
 import random
 import re
 import os
 import io
+from datetime import datetime, timezone, timedelta
 from PIL import Image, ImageDraw, ImageFont
+
+JST = timezone(timedelta(hours=9))
+
+def get_publish_datetime():
+    now = datetime.now(JST)
+    target = now.replace(hour=20, minute=0, second=0, microsecond=0)
+    if now >= target:
+        target += timedelta(days=1)
+    return target
 
 WP_URL = "https://toushi-kenja.com"
 CLAUDE_API_KEY = os.environ["CLAUDE_API_KEY"]
@@ -323,7 +334,10 @@ def get_categories(kw):
 
 def post(title, content, kw):
     try:
-        server = xmlrpc.client.ServerProxy(WP_URL + "/xmlrpc.php")
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        server = xmlrpc.client.ServerProxy(WP_URL + "/xmlrpc.php", context=context)
 
         thumbnail_id = None
         try:
@@ -335,10 +349,15 @@ def post(title, content, kw):
         except Exception as e:
             print("アイキャッチ生成エラー（投稿は続行）:", str(e))
 
+        target = get_publish_datetime()
+        post_date = xmlrpc.client.DateTime(target.strftime("%Y%m%dT%H:%M:%S"))
+        print(f"予約投稿時刻（JST）: {target.strftime('%Y-%m-%d %H:%M')}")
+
         post_data = {
             'post_title': title,
             'post_content': content,
-            'post_status': 'publish',
+            'post_status': 'future',
+            'post_date': post_date,
             'post_type': 'post',
             'terms_names': {'category': get_categories(kw)},
         }
@@ -349,6 +368,7 @@ def post(title, content, kw):
         print("投稿成功！投稿ID:", result)
     except Exception as e:
         print("Error:", str(e))
+        raise
 
 
 def main():
