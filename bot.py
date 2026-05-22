@@ -29,10 +29,20 @@ AFFILIATE_LINKS = {
     "SBI証券": "https://toushi-kenja.com",
     "楽天証券": "https://toushi-kenja.com",
     "マネックス証券": "https://toushi-kenja.com",
-    "松井証券": "https://toushi-kenja.com",
+    "松井証券": "https://px.a8.net/svt/ejp?a8mat=4B3U75+8TXK4Q+3XCC+6AZAQ",
     "auカブコム証券": "https://toushi-kenja.com",
     "岡三オンライン証券": "https://toushi-kenja.com",
     "PayPay証券": "https://toushi-kenja.com",
+    "JFX（2025年オリコン顧客満足度FX総合1位）": "https://px.a8.net/svt/ejp?a8mat=4B3U75+8EGAEI+25B2+5YZ76",
+    "ALTERNA（オルタナ・三井物産グループデジタル証券）": "https://px.a8.net/svt/ejp?a8mat=4B3U75+9713FU+5PYG+5YJRM",
+    # 不動産投資系
+    "クロスハウス（不動産管理・空室対策）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+9FD5WQ+4EZ2+NTJWY",
+    "JPリターンズ（マンション投資・無料面談）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+AP7JHM+40OC+BWVTE",
+    "不動産投資ドットコム（企業比較・紹介）": "https://af.moshimo.com/af/c/click?a_id=5580543&p_id=3600&pc_id=8700&pl_id=50665",
+    "音羽トレンディ（新築一戸建・仲介手数料無料）": "https://af.moshimo.com/af/c/click?a_id=5580542&p_id=4123&pc_id=10449&pl_id=56548",
+    "Oh!Ya（不動産投資一括資料請求）": "https://af.moshimo.com/af/c/click?a_id=5580538&p_id=4996&pc_id=13383&pl_id=66149",
+    "Oh!Ya（不動産投資無料相談）": "https://af.moshimo.com/af/c/click?a_id=5580537&p_id=4998&pc_id=13387&pl_id=66153",
+    "リフォームガイド（マンションリノベーション）": "https://af.moshimo.com/af/c/click?a_id=5580535&p_id=5572&pc_id=15281&pl_id=71782",
 }
 
 KEYWORDS = [
