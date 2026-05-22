@@ -285,6 +285,15 @@ def make_article(kw):
     )
     article = msg.content[0].text
     article = article.replace("AFFILIATE_LINK", make_affiliate_html(kw))
+    # 不動産投資LP誘導バナーを記事末尾に追加
+    lp_banner = '''
+<div style="background:#0f2a1a;border:2px solid #c8a84b;border-radius:8px;padding:24px;margin:40px 0;text-align:center;">
+  <p style="font-size:13px;color:#c8a84b;font-weight:bold;letter-spacing:2px;margin-bottom:8px">▼ 不動産投資で資産形成を始めたい方へ</p>
+  <p style="font-size:13px;color:#aaa;margin-bottom:16px">厳選7社から無料で相談・資料請求できます。相談料0円・勧誘なし。</p>
+  <a href="https://toushi-kenja.com/lp/" style="display:inline-block;background:#c8a84b;color:#000;padding:14px 32px;border-radius:4px;font-weight:bold;font-size:15px;text-decoration:none;">不動産投資 無料相談はこちら →</a>
+</div>
+'''
+    article = article + lp_banner
     return article
 
 
