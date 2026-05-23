@@ -24,6 +24,72 @@ def get_publish_datetime():
 import time
 import sys
 
+<<<<<<< Updated upstream
+=======
+
+def get_existing_future_dates(server):
+    """既存future投稿の日付(YYYYMMDD)セット"""
+    try:
+        posts = server.wp.getPosts(0, WP_USERNAME, WP_APP_PASSWORD,
+            {"post_status": "future", "number": 50, "post_type": "post"})
+        dates = set()
+        for p in posts:
+            pd = p.get("post_date")
+            if pd is None:
+                continue
+            pd_str = str(pd)
+            if len(pd_str) >= 8:
+                dates.add(pd_str[:8])
+        return dates
+    except Exception as e:
+        print(f"[WARN] 既存future取得失敗: {e}")
+        return set()
+
+
+def fix_missed_posts(server):
+    """過去日付のままfuture状態で残っている投稿を強制publish化（現在時刻に日付更新）"""
+    try:
+        posts = server.wp.getPosts(0, WP_USERNAME, WP_APP_PASSWORD,
+            {"post_status": "future", "number": 50, "post_type": "post",
+             "orderby": "post_date", "order": "ASC"})
+        now = datetime.now(JST)
+        now_xmlrpc = xmlrpc.client.DateTime(now.strftime("%Y%m%dT%H:%M:%S"))
+        fixed = 0
+        for p in posts:
+            pd = p.get("post_date")
+            if pd is None:
+                continue
+            try:
+                pd_dt = datetime.strptime(str(pd), "%Y%m%dT%H:%M:%S").replace(tzinfo=JST)
+                if pd_dt < now - timedelta(minutes=10):
+                    print(f"[ALERT] Missed Schedule発見: ID={p['post_id']} date={pd} title={p.get('post_title','')[:40]}")
+                    server.wp.editPost(0, WP_USERNAME, WP_APP_PASSWORD, p['post_id'],
+                        {"post_status": "publish", "post_date": now_xmlrpc})
+                    print(f"  → 強制publish化完了（date={now.strftime('%Y-%m-%d %H:%M')}）")
+                    fixed += 1
+            except Exception as e:
+                print(f"  パース失敗 ID={p.get('post_id')}: {e}")
+        if fixed > 0:
+            print(f"[INFO] Missed Schedule {fixed}件を自動修復")
+        return fixed
+    except Exception as e:
+        print(f"[WARN] missed posts check失敗: {e}")
+        return 0
+
+
+def get_publish_datetime_safe(server):
+    """重複しない次の20:00 JST スロット（既存futureを避けて翌日以降にシフト）"""
+    now = datetime.now(JST)
+    target = now.replace(hour=20, minute=0, second=0, microsecond=0)
+    if now.hour >= 22:
+        target += timedelta(days=1)
+    existing = get_existing_future_dates(server)
+    while target.strftime("%Y%m%d") in existing:
+        print(f"[INFO] {target.strftime('%Y-%m-%d')} 既存予約あり、翌日にシフト")
+        target += timedelta(days=1)
+    return target
+
+>>>>>>> Stashed changes
 def retry(func, *args, attempts=3, wait=20, label="", **kwargs):
     """失敗時に最大attempts回リトライ（指数バックオフ: 20秒→40秒→停止）"""
     for i in range(1, attempts + 1):
@@ -396,7 +462,12 @@ def post(title, content, kw):
         except Exception as e:
             print("アイキャッチ生成エラー（投稿は続行）:", str(e))
 
+<<<<<<< Updated upstream
         target = get_publish_datetime()
+=======
+        fix_missed_posts(server)
+        target = get_publish_datetime_safe(server)
+>>>>>>> Stashed changes
         post_date = xmlrpc.client.DateTime(target.strftime("%Y%m%dT%H:%M:%S"))
         print(f"予約投稿時刻（JST）: {target.strftime('%Y-%m-%d %H:%M')}")
 
