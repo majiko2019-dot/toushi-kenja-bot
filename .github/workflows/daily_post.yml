@@ -5,6 +5,10 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+env:
+  # GitHub Node.js 20 廃止 (2026-09-16) 対応: Node.js 24 強制使用
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   post:
     runs-on: ubuntu-latest
