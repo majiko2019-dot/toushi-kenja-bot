@@ -2,12 +2,13 @@ name: Daily WordPress Post
 
 on:
   schedule:
-    - cron: '0 11 * * *'
+    - cron: '0 2 * * *'
   workflow_dispatch:
 
 jobs:
   post:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
