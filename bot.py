@@ -1,4 +1,4 @@
-import anthropic
+﻿import anthropic
 import httpx
 import xmlrpc.client
 import ssl
@@ -7,16 +7,59 @@ import re
 import os
 import io
 from datetime import datetime, timezone, timedelta
+import time
+import sys
 from PIL import Image, ImageDraw, ImageFont
 
 JST = timezone(timedelta(hours=9))
 
 def get_publish_datetime():
+    """当日20:00 JSTを返す。22時以降は翌日20:00に回す（GitHub Actions遅延考慮）"""
     now = datetime.now(JST)
     target = now.replace(hour=20, minute=0, second=0, microsecond=0)
-    if now >= target:
+    if now.hour >= 22:
         target += timedelta(days=1)
     return target
+
+import time
+import sys
+
+def retry(func, *args, attempts=3, wait=20, label="", **kwargs):
+    """失敗時に最大attempts回リトライ（指数バックオフ: 20秒→40秒→停止）"""
+    for i in range(1, attempts + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if i == attempts:
+                print(f"[FAIL] {label} | 試行{i}/{attempts} 最終失敗: {e}")
+                raise
+            wait_sec = wait * (2 ** (i - 1))
+            print(f"[WARN] {label} | 試行{i}/{attempts} 失敗: {e}")
+            print(f"       {wait_sec}秒後にリトライします...")
+            time.sleep(wait_sec)
+
+
+def validate_article(html, min_chars=1500):
+    """生成記事の品質チェック"""
+    if not html or len(html) < min_chars:
+        raise ValueError(
+            f"記事が短すぎます ({len(html) if html else 0}文字 / 最低{min_chars}文字必要)"
+        )
+    if "<h1" not in html.lower():
+        raise ValueError("H1タグが見つかりません（記事生成失敗の可能性）")
+    print(f"[OK] 記事バリデーション通過 ({len(html)}文字)")
+    return True
+
+
+def check_env(keys):
+    """必要な環境変数の存在確認（起動時に必ず実行）"""
+    missing = [k for k in keys if not os.environ.get(k)]
+    if missing:
+        print(f"[FATAL] 環境変数未設定: {', '.join(missing)}", file=sys.stderr)
+        sys.exit(1)
+    print(f"[OK] 環境変数確認: {', '.join(keys)}")
+
+
 
 WP_URL = "https://toushi-kenja.com"
 CLAUDE_API_KEY = os.environ["CLAUDE_API_KEY"]
@@ -232,7 +275,7 @@ def generate_eyecatch(title, kw):
 
 
 def upload_media_xmlrpc(server, image_bytes, filename):
-    try:
+    def _upload():
         data = {
             'name': filename,
             'type': 'image/jpeg',
@@ -243,8 +286,10 @@ def upload_media_xmlrpc(server, image_bytes, filename):
         attachment_id = result.get('id')
         print("画像アップロード成功 ID:", attachment_id)
         return attachment_id
+    try:
+        return retry(_upload, label="画像アップロード", attempts=3, wait=10)
     except Exception as e:
-        print("画像アップロードエラー（投稿は続行）:", str(e))
+        print("画像アップロード失敗（投稿は続行）:", str(e))
         return None
 
 
@@ -259,7 +304,7 @@ def make_affiliate_html(kw):
 
 
 def make_article(kw):
-    http_client = httpx.Client(verify=False)
+    http_client = httpx.Client(verify=False, timeout=120.0)
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, http_client=http_client)
     from datetime import datetime
     year = datetime.now().year
@@ -290,12 +335,15 @@ def make_article(kw):
     t += "<h2>まとめ</h2>\n\n"
     t += "HTML形式で書いてください。比較表はtableタグで作成し、FAQはschema.org対応の構造化データも含めてください。"
 
-    msg = client.messages.create(
-        model="claude-opus-4-7",
-        max_tokens=5000,
-        messages=[{"role": "user", "content": t}],
-    )
-    article = msg.content[0].text
+    def _call_claude():
+        msg = client.messages.create(
+            model="claude-opus-4-7",
+            max_tokens=5000,
+            messages=[{"role": "user", "content": t}],
+        )
+        return msg.content[0].text
+
+    article = retry(_call_claude, label="Claude API", attempts=3, wait=30)
     article = article.replace("AFFILIATE_LINK", make_affiliate_html(kw))
     # 不動産投資LP誘導バナーを記事末尾に追加
     lp_banner = '''
@@ -343,8 +391,7 @@ def post(title, content, kw):
         try:
             print("アイキャッチ画像を生成中...")
             image_bytes = generate_eyecatch(title, kw)
-            safe_kw = re.sub(r"[^\w]", "_", kw)
-            filename = f"eyecatch_{safe_kw}.jpg"
+            filename = f"eyecatch_{int(time.time())}.jpg"  # ASCII-only
             thumbnail_id = upload_media_xmlrpc(server, image_bytes, filename)
         except Exception as e:
             print("アイキャッチ生成エラー（投稿は続行）:", str(e))
@@ -364,7 +411,10 @@ def post(title, content, kw):
         if thumbnail_id:
             post_data['post_thumbnail'] = int(thumbnail_id)
 
-        result = server.wp.newPost(0, WP_USERNAME, WP_APP_PASSWORD, post_data)
+        result = retry(
+            lambda: server.wp.newPost(0, WP_USERNAME, WP_APP_PASSWORD, post_data),
+            label="WordPress投稿", attempts=3, wait=15
+        )
         print("投稿成功！投稿ID:", result)
     except Exception as e:
         print("Error:", str(e))
@@ -372,6 +422,9 @@ def post(title, content, kw):
 
 
 def main():
+    start = datetime.now(JST)
+    print(f"[START] {start.strftime('%Y-%m-%d %H:%M:%S JST')}")
+    check_env(["CLAUDE_API_KEY", "TOUSHI_WP_USERNAME", "TOUSHI_WP_APP_PASSWORD"])
     kw = random.choice(KEYWORDS)
     print("キーワード:", kw)
     print("記事を生成中... (1〜2分かかります)")
@@ -380,6 +433,8 @@ def main():
     print("タイトル:", title)
     print("WordPressに投稿中...")
     post(title, html, kw)
+    end = datetime.now(JST)
+    print(f"[END] {end.strftime('%Y-%m-%d %H:%M:%S JST')} (所要時間: {int((end-start).total_seconds())}秒)")
 
 
 if __name__ == "__main__":
