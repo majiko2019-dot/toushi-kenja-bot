@@ -24,8 +24,6 @@ def get_publish_datetime():
 import time
 import sys
 
-<<<<<<< Updated upstream
-=======
 
 def get_existing_future_dates(server):
     """既存future投稿の日付(YYYYMMDD)セット"""
@@ -89,7 +87,7 @@ def get_publish_datetime_safe(server):
         target += timedelta(days=1)
     return target
 
->>>>>>> Stashed changes
+
 def retry(func, *args, attempts=3, wait=20, label="", **kwargs):
     """失敗時に最大attempts回リトライ（指数バックオフ: 20秒→40秒→停止）"""
     for i in range(1, attempts + 1):
@@ -462,12 +460,8 @@ def post(title, content, kw):
         except Exception as e:
             print("アイキャッチ生成エラー（投稿は続行）:", str(e))
 
-<<<<<<< Updated upstream
-        target = get_publish_datetime()
-=======
         fix_missed_posts(server)
         target = get_publish_datetime_safe(server)
->>>>>>> Stashed changes
         post_date = xmlrpc.client.DateTime(target.strftime("%Y%m%dT%H:%M:%S"))
         print(f"予約投稿時刻（JST）: {target.strftime('%Y-%m-%d %H:%M')}")
 
