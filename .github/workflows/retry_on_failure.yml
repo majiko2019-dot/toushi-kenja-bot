@@ -1,0 +1,65 @@
+name: Backup Retry on Failure
+
+# 本cron（Daily WordPress Post）が失敗した時、30分後に自動再実行する。
+# 一時的なネットワーク障害・API rate limit・外部サービス瞬断を救済する目的。
+# コードバグ等の永続的障害には対応不可（その場合は最終アラートメールで人間対応依頼）。
+#
+# 設置日: 2026-05-24 (一丁目一番地原則実装)
+
+on:
+  workflow_run:
+    workflows: ["Daily WordPress Post"]
+    types: [completed]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  retry:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event != 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: 一時的障害の自然回復を待つ（30分）
+        run: sleep 1800
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Japanese fonts
+        run: sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install dependencies
+        run: pip install anthropic httpx requests urllib3 Pillow
+
+      - name: Run bot (バックアップ実行)
+        run: python bot.py
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          TOUSHI_WP_USERNAME: ${{ secrets.TOUSHI_WP_USERNAME }}
+          TOUSHI_WP_APP_PASSWORD: ${{ secrets.TOUSHI_WP_APP_PASSWORD }}
+
+      - name: 🚨 最終アラート（本cron＋バックアップ両方失敗）
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: majiko2019@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "🚨🚨 [緊急] 投資の賢者 バックアップcronも失敗"
+          to: majiko2019@gmail.com
+          from: "自動化監視 <majiko2019@gmail.com>"
+          body: |
+            【投資の賢者】の本cron＋バックアップcronの両方が失敗しました。
+            自動復旧不能。人間対応が必要です。
+
+            本cron失敗ログ: ${{ github.event.workflow_run.html_url }}
+            バックアップ詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            次の手動ステップ:
+            1. Claude Codeで原因調査依頼（feedback-incident-response-playbook 参照）
+            2. コード修正
+            3. workflow_dispatch で再実行
