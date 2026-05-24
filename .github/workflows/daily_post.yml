@@ -47,5 +47,6 @@ jobs:
             ワークフロー: ${{ github.workflow }}
             詳細ログ: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-            毎朝8時の自動監視エージェントが修復を試みます。
+            30分後にバックアップcronが自動再実行されます。
+            それも失敗した場合は別途「🚨 バックアップcronも失敗」アラートが届きます。
             急ぎの場合はClaude Codeにてご確認ください。
