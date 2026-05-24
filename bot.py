@@ -418,6 +418,19 @@ def make_article(kw):
 </div>
 '''
     article = article + lp_banner
+    # KDP書籍誘導バナーを記事末尾に追加（マルヒデ収益化現状マップ準拠）
+    kdp_banner = '''
+<!-- KDP_BOOK_BANNER_v1 -->
+<div style="background:#0a1a4a;border:2px solid #d4af37;border-radius:8px;padding:28px;margin:40px 0;text-align:center;">
+  <p style="font-size:13px;color:#d4af37;font-weight:bold;letter-spacing:2px;margin:0 0 12px 0">📚 著者の体験記 — Amazon Kindle 発売中</p>
+  <p style="font-size:22px;color:#fff;font-weight:bold;margin:8px 0 4px;line-height:1.4">生成AIが人生を変えた。</p>
+  <p style="font-size:13px;color:#bbb;margin:0 0 16px;line-height:1.6">中卒・借金・うつ病「平成最後の愚か者」が<br>AIと組んで1週間で人生を変えた全記録</p>
+  <p style="font-size:13px;color:#d4af37;margin:0 0 18px">¥499（Kindle Unlimited会員は無料で読み放題）</p>
+  <a href="https://www.amazon.co.jp/dp/B0H29VZJVG" target="_blank" rel="nofollow" style="display:inline-block;background:#d4af37;color:#0a1a4a;padding:14px 36px;border-radius:4px;font-weight:bold;font-size:15px;text-decoration:none;">▶ Amazonで読む</a>
+  <p style="font-size:11px;color:#888;margin:14px 0 0">著者：まじこ（マルヒデ代表）</p>
+</div>
+'''
+    article = article + kdp_banner
     return article
 
 
