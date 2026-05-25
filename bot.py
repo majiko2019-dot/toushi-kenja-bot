@@ -140,7 +140,7 @@ AFFILIATE_LINKS = {
     "SBI FXトレード": "https://toushi-kenja.com",
     "外為どっとコム": "https://toushi-kenja.com",
     "みんなのFX": "https://toushi-kenja.com",
-    "ヒロセ通商 LION FX": "https://toushi-kenja.com",
+    "ヒロセ通商 LION FX": "https://px.a8.net/svt/ejp?a8mat=4B3U75+79YT9M+1FOU+62MDE",
     "OANDA証券": "https://toushi-kenja.com",
     "IG証券": "https://toushi-kenja.com",
     "楽天FX": "https://toushi-kenja.com",
