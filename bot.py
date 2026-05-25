@@ -388,7 +388,11 @@ def make_article(kw):
         return msg.content[0].text
 
     article = retry(_call_claude, label="Claude API", attempts=3, wait=30)
-    article = article.replace("AFFILIATE_LINK", make_affiliate_html(kw))
+    aff_html = make_affiliate_html(kw)
+    if "AFFILIATE_LINK" in article:
+        article = article.replace("AFFILIATE_LINK", aff_html)
+    else:
+        article = article + aff_html
     # 不動産投資LP誘導バナーを記事末尾に追加
     lp_banner = '''
 <div style="background:#0f2a1a;border:2px solid #c8a84b;border-radius:8px;padding:24px;margin:40px 0;text-align:center;">
