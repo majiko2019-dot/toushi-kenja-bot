@@ -167,6 +167,12 @@ AFFILIATE_LINKS = {
     "借地権 無料相談ドットコム": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+AVRB56+5TEW+5YRHE",
     "訳あり物件買取センター（借地権の買取〜売却）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+AWCQQY+5TF6+5YJRM",
     "ミライアス スマート仲介（マンション・戸建・土地査定）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+CC5GDM+4I6M+5YJRM",
+    "DMM FX（初心者向けFX口座）": "https://h.accesstrade.net/sp/cc?rk=01004ixl00ot1y",
+    "ザイFX！投資戦略メルマガ": "https://h.accesstrade.net/sp/cc?rk=0100p78p00ot1y",
+    "フジトミ証券 シストレセレクト365（FX自動売買）": "https://h.accesstrade.net/sp/cc?rk=0100ms9100ot1y",
+    "DMM 株（DMM.com証券）": "https://h.accesstrade.net/sp/cc?rk=0100mkk200ot1y",
+    "mattoco+（投資信託）": "https://h.accesstrade.net/sp/cc?rk=0100pgel00ot1y",
+    "TOSSY（投資サービス）": "https://h.accesstrade.net/sp/cc?rk=0100q1qf00ot1y",
 }
 
 KEYWORDS = [
