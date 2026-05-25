@@ -162,6 +162,11 @@ AFFILIATE_LINKS = {
     "Oh!Ya（不動産投資無料相談）": "https://af.moshimo.com/af/c/click?a_id=5580537&p_id=4998&pc_id=13387&pl_id=66153",
     "リフォームガイド（マンションリノベーション）": "https://af.moshimo.com/af/c/click?a_id=5580535&p_id=5572&pc_id=15281&pl_id=71782",
     "解体工事見積りnet（解体工事一括見積り）": "https://af.moshimo.com/af/c/click?a_id=5580530&p_id=7529&pc_id=21742&pl_id=94384",
+    "LOCALGOAT（AI検索時代の店舗集客AIO×MEO×SNS）": "https://af.moshimo.com/af/c/click?a_id=5580529&p_id=7521&pc_id=21723&pl_id=94332",
+    "トウシェル（無料の不動産投資相談）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+BUAG8A+20NK+ZQV5U",
+    "借地権 無料相談ドットコム": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+AVRB56+5TEW+5YRHE",
+    "訳あり物件買取センター（借地権の買取〜売却）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+AWCQQY+5TF6+5YJRM",
+    "ミライアス スマート仲介（マンション・戸建・土地査定）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+CC5GDM+4I6M+5YJRM",
 }
 
 KEYWORDS = [
