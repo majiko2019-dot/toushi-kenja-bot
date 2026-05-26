@@ -173,6 +173,7 @@ AFFILIATE_LINKS = {
     "DMM 株（DMM.com証券）": "https://h.accesstrade.net/sp/cc?rk=0100mkk200ot1y",
     "mattoco+（投資信託）": "https://h.accesstrade.net/sp/cc?rk=0100pgel00ot1y",
     "TOSSY（投資サービス）": "https://h.accesstrade.net/sp/cc?rk=0100q1qf00ot1y",
+    "moomoo証券（手数料無料・米国株・NISA対応）": "https://h.accesstrade.net/sp/cc?rk=0100pd0z00ot1y",
 }
 
 KEYWORDS = [
