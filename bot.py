@@ -383,17 +383,21 @@ def make_article(kw):
     def _call_claude():
         msg = client.messages.create(
             model="claude-opus-4-7",
-            max_tokens=5000,
+            max_tokens=8192,
             messages=[{"role": "user", "content": t}],
         )
         return msg.content[0].text
 
     article = retry(_call_claude, label="Claude API", attempts=3, wait=30)
-    aff_html = make_affiliate_html(kw)
+    aff_html_1 = make_affiliate_html(kw)
+    aff_html_2 = make_affiliate_html(kw)
     if "AFFILIATE_LINK" in article:
-        article = article.replace("AFFILIATE_LINK", aff_html)
-    else:
-        article = article + aff_html
+        article = article.replace("AFFILIATE_LINK", aff_html_1, 1)
+    if "</h2>" in article:
+        parts = article.rsplit("</h2>", 1)
+        article = parts[0] + "</h2>" + aff_html_2 + parts[1] if len(parts) == 2 else article
+    if aff_html_1 not in article:
+        article = article + aff_html_1
     # 不動産投資LP誘導バナーを記事末尾に追加
     lp_banner = '''
 <div style="background:#0f2a1a;border:2px solid #c8a84b;border-radius:8px;padding:24px;margin:40px 0;text-align:center;">
