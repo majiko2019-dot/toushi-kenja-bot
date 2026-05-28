@@ -176,6 +176,8 @@ AFFILIATE_LINKS = {
     "moomoo証券（手数料無料・米国株・NISA対応）": "https://h.accesstrade.net/sp/cc?rk=0100pd0z00ot1y",
     "Funds（ファンズ・貸付投資）": "https://h.accesstrade.net/sp/cc?rk=0100nc2600ot1y",
     "FXブロードネット": "https://h.accesstrade.net/sp/cc?rk=01002z1400ot1y",
+    "ファイナンシャルアカデミー（お金の教養・投資スクール）": "https://af.moshimo.com/af/c/click?a_id=5580541&p_id=4629&pc_id=12135&pl_id=61676",
+    "岩井コスモ証券（ネット取引）": "https://h.accesstrade.net/sp/cc?rk=0100ip8800ot1y",
 }
 
 KEYWORDS = [
