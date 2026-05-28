@@ -319,7 +319,7 @@ def generate_eyecatch(title, kw):
         draw.text((x, y), line, font=font_title, fill=(255, 255, 255))
 
     buf = io.BytesIO()
-    img.save(buf, "JPEG", quality=92)
+    img.save(buf, "WEBP", quality=85, method=6)
     return buf.getvalue()
 
 
@@ -327,7 +327,7 @@ def upload_media_xmlrpc(server, image_bytes, filename):
     def _upload():
         data = {
             'name': filename,
-            'type': 'image/jpeg',
+            'type': 'image/webp',
             'bits': xmlrpc.client.Binary(image_bytes),
             'overwrite': False,
         }
@@ -350,6 +350,83 @@ def make_affiliate_html(kw):
         html += f'<p>✅ <a href="{url}" target="_blank" rel="nofollow" style="color:#b8860b;font-weight:bold;">{name}【公式】無料口座開設はこちら</a></p>'
     html += '</div>'
     return html
+
+
+# 4サイト相互送客（自サイトを除く他3サイトへ誘導）
+CROSS_SITES = [
+    ("カードの賢者", "https://card-kenja.com", "お得なクレジットカード比較"),
+    ("転職の賢者", "https://tenshoku-kenja.com", "転職エージェント徹底比較"),
+    ("幸せの花道", "https://beauty-life.me", "30代からの暮らし・美容"),
+]
+
+
+def make_cross_site_html():
+    """マルヒデ系列サイトへの相互送客バナー"""
+    cards = ""
+    for name, url, desc in CROSS_SITES:
+        cards += (
+            f'<a href="{url}" target="_blank" rel="noopener" '
+            f'style="display:block;padding:12px 16px;margin:8px 0;background:#fff;'
+            f'border:1px solid #d4af37;border-radius:6px;text-decoration:none;color:#0a1a4a;">'
+            f'<span style="font-weight:bold;">{name}</span>'
+            f'<span style="font-size:12px;color:#666;display:block;">{desc}</span></a>'
+        )
+    return (
+        '<div style="background:#f8f4e0;border-radius:8px;padding:20px;margin:32px 0;">'
+        '<p style="font-weight:bold;font-size:15px;color:#0a1a4a;margin:0 0 8px;">'
+        '📚 マルヒデの関連メディアもチェック</p>' + cards + '</div>'
+    )
+
+
+def make_related_html(server, current_title="", limit=3):
+    """既存の公開記事からランダムに内部リンク（関連記事）を生成"""
+    try:
+        posts = server.wp.getPosts(0, WP_USERNAME, WP_APP_PASSWORD,
+            {"post_status": "publish", "number": 30, "post_type": "post"})
+        cand = [p for p in posts if p.get("post_title") and p.get("link")
+                and p.get("post_title") != current_title]
+        if not cand:
+            return ""
+        picks = random.sample(cand, min(limit, len(cand)))
+        items = ""
+        for p in picks:
+            items += (f'<li style="margin:8px 0;"><a href="{p["link"]}" '
+                      f'style="color:#b8860b;font-weight:bold;text-decoration:none;">'
+                      f'{p["post_title"]}</a></li>')
+        return ('<div style="background:#f5f5f5;border-left:4px solid #d4af37;'
+                'border-radius:8px;padding:20px;margin:32px 0;">'
+                '<p style="font-weight:bold;color:#0a1a4a;margin:0 0 10px;">あわせて読みたい</p>'
+                f'<ul style="list-style:none;padding:0;margin:0;">{items}</ul></div>')
+    except Exception as e:
+        print(f"[WARN] 関連記事取得失敗（投稿は続行）: {e}")
+        return ""
+
+
+def make_jsonld(title, kw):
+    """Article + BreadcrumbList の構造化データ（JSON-LD）"""
+    import json as _json
+    cats = get_categories(kw)
+    cat = cats[0] if cats else "投資ノウハウ"
+    today = datetime.now(JST).strftime("%Y-%m-%d")
+    article = {
+        "@context": "https://schema.org", "@type": "Article",
+        "headline": title,
+        "author": {"@type": "Person", "name": "まじこ（マルヒデ代表）"},
+        "publisher": {"@type": "Organization", "name": "投資の賢者",
+                      "url": WP_URL},
+        "datePublished": today, "dateModified": today,
+        "mainEntityOfPage": WP_URL,
+    }
+    breadcrumb = {
+        "@context": "https://schema.org", "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "ホーム", "item": WP_URL},
+            {"@type": "ListItem", "position": 2, "name": cat, "item": WP_URL},
+            {"@type": "ListItem", "position": 3, "name": title},
+        ],
+    }
+    return (f'<script type="application/ld+json">{_json.dumps(article, ensure_ascii=False)}</script>'
+            f'<script type="application/ld+json">{_json.dumps(breadcrumb, ensure_ascii=False)}</script>')
 
 
 def make_article(kw):
@@ -437,6 +514,8 @@ def make_article(kw):
 </div>
 '''
     article = article + kdp_banner
+    # マルヒデ系列サイトへの相互送客バナー
+    article = article + make_cross_site_html()
     return article
 
 
@@ -474,7 +553,7 @@ def post(title, content, kw):
         try:
             print("アイキャッチ画像を生成中...")
             image_bytes = generate_eyecatch(title, kw)
-            filename = f"eyecatch_{int(time.time())}.jpg"  # ASCII-only
+            filename = f"eyecatch_{int(time.time())}.webp"  # ASCII-only
             thumbnail_id = upload_media_xmlrpc(server, image_bytes, filename)
         except Exception as e:
             print("アイキャッチ生成エラー（投稿は続行）:", str(e))
@@ -483,6 +562,10 @@ def post(title, content, kw):
         target = get_publish_datetime_safe(server)
         post_date = xmlrpc.client.DateTime(target.strftime("%Y%m%dT%H:%M:%S"))
         print(f"予約投稿時刻（JST）: {target.strftime('%Y-%m-%d %H:%M')}")
+
+        # 内部リンク（関連記事）と構造化データを付与
+        content = content + make_related_html(server, current_title=title)
+        content = content + make_jsonld(title, kw)
 
         post_data = {
             'post_title': title,
