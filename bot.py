@@ -360,6 +360,22 @@ CROSS_SITES = [
 ]
 
 
+AUTHOR_PAGE_URL = WP_URL + "/著者プロフィール/"
+
+
+def make_author_byline():
+    """この記事を書いた人（著者ページへの導線・E-E-A-T）"""
+    return (
+        '<div style="border:1px solid #ddd;border-radius:8px;padding:16px;'
+        'margin:24px 0;background:#fafafa;">'
+        '<p style="margin:0;font-size:13px;color:#888;">この記事を書いた人</p>'
+        '<p style="margin:4px 0;font-weight:bold;color:#0a1a4a;">まじこ（マルヒデ代表）</p>'
+        '<p style="margin:0;font-size:13px;color:#555;">中卒・うつ病から生成AIで事業を立ち上げた実践者。Kindle著者。'
+        f'<a href="{AUTHOR_PAGE_URL}" style="color:#b8860b;font-weight:bold;">プロフィール詳細 →</a></p>'
+        '</div>'
+    )
+
+
 def make_cross_site_html():
     """マルヒデ系列サイトへの相互送客バナー"""
     cards = ""
@@ -514,6 +530,8 @@ def make_article(kw):
 </div>
 '''
     article = article + kdp_banner
+    # この記事を書いた人（著者ページ導線）
+    article = article + make_author_byline()
     # マルヒデ系列サイトへの相互送客バナー
     article = article + make_cross_site_html()
     return article
