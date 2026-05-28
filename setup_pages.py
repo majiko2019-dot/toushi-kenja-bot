@@ -103,6 +103,26 @@ PAGES = [
 """
     },
     {
+        "title": "著者プロフィール",
+        "slug": "profile",
+        "content": f"""
+<h2>著者プロフィール</h2>
+<p><strong>まじこ</strong>（マルヒデ代表）</p>
+
+<p>中卒・借金・うつ病という「どん底」から、生成AIと組んで複数の事業を立ち上げた実践者です。その全記録をまとめた電子書籍『生成AIが人生を変えた。』をAmazon Kindleで出版しました。</p>
+
+<p>「専門用語だらけで挫折した」という自分自身の経験から、初心者が本当に知りたいことを<strong>正直に・分かりやすく</strong>伝えることをモットーに、「{SITE_NAME}」の記事を執筆・監修しています。</p>
+
+<p>FX・証券口座・投資の情報は、公開情報や各社公式サイトに基づき、メリットだけでなくデメリットも含めて中立的にお伝えすることを心がけています。</p>
+
+<h2>著書</h2>
+<p>📚 <a href="https://www.amazon.co.jp/dp/B0H29VZJVG" target="_blank" rel="nofollow">生成AIが人生を変えた。</a>（Amazon Kindle）</p>
+
+<h2>運営</h2>
+<p>運営者：{OPERATOR_NAME}（<a href="{SITE_URL}/about/">運営者情報はこちら</a>）</p>
+"""
+    },
+    {
         "title": "お問い合わせ",
         "slug": "contact",
         "content": f"""
@@ -129,6 +149,22 @@ PAGES = [
 ]
 
 
+def get_existing_pages(server):
+    """既存固定ページのslug・タイトル集合を返す（重複作成防止）"""
+    existing = set()
+    try:
+        pages = server.wp.getPosts(0, WP_USERNAME, WP_APP_PASSWORD,
+            {"post_type": "page", "number": 100})
+        for pg in pages:
+            if pg.get("post_name"):
+                existing.add(pg["post_name"])
+            if pg.get("post_title"):
+                existing.add(pg["post_title"])
+    except Exception as e:
+        print(f"[WARN] 既存ページ取得失敗（全件作成を試みます）: {e}")
+    return existing
+
+
 def create_page(server, page):
     post_data = {
         'post_title': page['title'],
@@ -146,7 +182,11 @@ def main():
     server = xmlrpc.client.ServerProxy(WP_URL + "/xmlrpc.php")
 
     print(f"=== {SITE_NAME} 固定ページ作成開始 ===")
+    existing = get_existing_pages(server)
     for page in PAGES:
+        if page['slug'] in existing or page['title'] in existing:
+            print(f"⏭ スキップ（既存）：{page['title']}")
+            continue
         try:
             create_page(server, page)
         except Exception as e:
