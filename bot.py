@@ -529,6 +529,8 @@ def make_article(kw):
   <p style="font-size:11px;color:#888;margin:14px 0 0">著者：まじこ（マルヒデ代表）</p>
 </div>
 '''
+    # LINE友だち追加CTA（リードマグネット・owned audience獲得）
+    article = article + '<div style="background:#06C755;border-radius:10px;padding:24px;margin:32px 0;text-align:center;"><p style="color:#fff;font-size:18px;font-weight:bold;margin:0 0 6px;">📩 証券口座選びで失敗しないために</p><p style="color:#eafff2;font-size:14px;margin:0 0 16px;line-height:1.6;">LINE友だち追加で「初心者の証券口座選び 失敗しない7項目シート」を無料プレゼント</p><a href="https://lin.ee/5YoDT4r" target="_blank" rel="nofollow noopener" style="display:inline-block;background:#fff;color:#06C755;font-weight:bold;padding:12px 32px;border-radius:6px;text-decoration:none;font-size:15px;">＋ 友だち追加で受け取る</a></div>'
     article = article + kdp_banner
     # この記事を書いた人（著者ページ導線）
     article = article + make_author_byline()
