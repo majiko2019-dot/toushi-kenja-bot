@@ -534,6 +534,8 @@ def make_article(kw):
     article = article + make_author_byline()
     # マルヒデ系列サイトへの相互送客バナー
     article = article + make_cross_site_html()
+    # 運営者X（@ore_chusotsu）フォロー誘導（さりげなく記事末尾）
+    article = article + '<p style="text-align:center; font-size:0.85em; color:#777; margin-top:1em;">📱 運営の裏側・最新情報はXで発信中 → <a href="https://x.com/ore_chusotsu" target="_blank" rel="nofollow noopener">@ore_chusotsu</a></p>'
     return article
 
 
