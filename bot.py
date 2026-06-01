@@ -357,6 +357,7 @@ CROSS_SITES = [
     ("カードの賢者", "https://card-kenja.com", "お得なクレジットカード比較"),
     ("転職の賢者", "https://tenshoku-kenja.com", "転職エージェント徹底比較"),
     ("幸せの花道", "https://beauty-life.me", "30代からの暮らし・美容"),
+    ("プログラミングの賢者", "https://programming-kenja.com", "未経験から学ぶプログラミング・IT転職"),
 ]
 
 
