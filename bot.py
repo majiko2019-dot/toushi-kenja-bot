@@ -429,7 +429,8 @@ def make_jsonld(title, kw):
     article = {
         "@context": "https://schema.org", "@type": "Article",
         "headline": title,
-        "author": {"@type": "Person", "name": "まじこ（マルヒデ代表）"},
+        "inLanguage": "ja",
+        "author": {"@type": "Person", "name": "まじこ（マルヒデ代表）", "url": AUTHOR_PAGE_URL, "jobTitle": "マルヒデ代表", "description": "中卒・うつ病から生成AIで事業を立ち上げた実践者。Kindle著者。", "sameAs": ["https://www.amazon.co.jp/dp/B0H29VZJVG", "https://x.com/ore_chusotsu"]},
         "publisher": {"@type": "Organization", "name": "投資の賢者",
                       "url": WP_URL},
         "datePublished": today, "dateModified": today,
@@ -466,6 +467,7 @@ def make_article(kw):
     t += "・最初の100字以内にキーワードを入れてリード文を書く\n"
     t += "・リード文の直後に『結論先出し』ブロックを置き、忙しい読者向けに要点を3行で先に提示する\n\n"
     t += "・各h2見出しの直後に、その見出しが投げかける問いへ40字前後で即答する一文を「<p><strong>【結論】（40字前後で要点）</strong></p>」の形で必ず置き、その後にh3で詳しく展開する（AI検索・AI Overviewに引用されやすくするため）\n\n"
+    t += "・記事中の重要な数値やデータには、その直後に「（出典：◯◯公式・2026年時点）」のように出典を簡潔に添える（信頼性とAI検索での引用のため）\n\n"
     t += "【E-E-A-T（専門性・信頼性）】\n"
     t += "・公式情報や具体的な事実に基づいて書き、根拠のない断定や誇大表現は避ける\n"
     t += "・メリットだけでなくデメリット・注意点も正直に書く（中立性で信頼を得る）\n"
