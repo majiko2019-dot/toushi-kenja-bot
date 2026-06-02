@@ -374,6 +374,7 @@ def make_author_byline():
         '<p style="margin:4px 0;font-weight:bold;color:#0a1a4a;">まじこ（マルヒデ代表）</p>'
         '<p style="margin:0;font-size:13px;color:#555;">中卒・うつ病から生成AIで事業を立ち上げた実践者。Kindle著者。'
         f'<a href="{AUTHOR_PAGE_URL}" style="color:#b8860b;font-weight:bold;">プロフィール詳細 →</a></p>'
+        '<p style="margin:8px 0 0;font-size:13px;color:#555;">📕 <a href="https://www.amazon.co.jp/dp/B0H29VZJVG">Kindle著書「生成AIが人生を変えた。」</a>　𝕏 <a href="https://x.com/ore_chusotsu">@ore_chusotsu</a></p>'
         '</div>'
     )
 
