@@ -179,6 +179,7 @@ AFFILIATE_LINKS = {
     "FXブロードネット": "https://h.accesstrade.net/sp/cc?rk=01002z1400ot1y",
     "ファイナンシャルアカデミー（お金の教養・投資スクール）": "https://af.moshimo.com/af/c/click?a_id=5580541&p_id=4629&pc_id=12135&pl_id=61676",
     "岩井コスモ証券（ネット取引）": "https://h.accesstrade.net/sp/cc?rk=0100ip8800ot1y",
+    "相続アシスト（相続税申告・手続き一括代行）": "https://af.moshimo.com/af/c/click?a_id=5580531&p_id=7301&pc_id=20977&pl_id=91952",
 }
 
 KEYWORDS = [
