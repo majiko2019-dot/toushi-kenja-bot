@@ -447,7 +447,7 @@ def make_jsonld(title, kw):
 
 
 def make_article(kw):
-    http_client = httpx.Client(verify=False, timeout=120.0)
+    http_client = httpx.Client(verify=False, timeout=300.0)
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, http_client=http_client)
     from datetime import datetime
     year = datetime.now().year
