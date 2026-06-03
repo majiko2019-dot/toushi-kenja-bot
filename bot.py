@@ -181,6 +181,8 @@ AFFILIATE_LINKS = {
     "岩井コスモ証券（ネット取引）": "https://h.accesstrade.net/sp/cc?rk=0100ip8800ot1y",
     "相続アシスト（相続税申告・手続き一括代行）": "https://af.moshimo.com/af/c/click?a_id=5580531&p_id=7301&pc_id=20977&pl_id=91952",
     "NEWDOOR（ゲイのためのお金の相談所・無料面談）": "https://af.moshimo.com/af/c/click?a_id=5611104&p_id=7248&pc_id=20788&pl_id=91278",
+    "DMM CFD（DMM.com証券・全銘柄取引手数料0円のCFD）": "https://click.j-a-net.jp/2450594/405008/",
+    "外為オンライン（年間取引高No.1・FX）": "https://click.j-a-net.jp/2450594/71348/",
 }
 
 KEYWORDS = [
