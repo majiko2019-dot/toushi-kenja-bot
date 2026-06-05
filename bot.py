@@ -183,6 +183,8 @@ AFFILIATE_LINKS = {
     "NEWDOOR（ゲイのためのお金の相談所・無料面談）": "https://af.moshimo.com/af/c/click?a_id=5611104&p_id=7248&pc_id=20788&pl_id=91278",
     "DMM CFD（DMM.com証券・全銘柄取引手数料0円のCFD）": "https://click.j-a-net.jp/2450594/405008/",
     "外為オンライン（年間取引高No.1・FX）": "https://click.j-a-net.jp/2450594/71348/",
+    "ファイナンシャルアカデミー（マネースクール無料体験）": "https://af.moshimo.com/af/c/click?a_id=5611113&p_id=4627&pc_id=12127&pl_id=61670",
+    "ファイナンシャルアカデミー 株式投資スクール（無料体験セミナー）": "https://af.moshimo.com/af/c/click?a_id=5611114&p_id=4628&pc_id=12131&pl_id=61673",
 }
 
 KEYWORDS = [
