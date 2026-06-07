@@ -517,6 +517,42 @@ def make_jsonld(title, kw):
             f'<script type="application/ld+json">{_json.dumps(breadcrumb, ensure_ascii=False)}</script>')
 
 
+def style_article_html(html):
+    """Claude生成の素のHTML本文に視認性向上のインラインCSSを注入する。
+    <style>ブロックは使わない（SWELL/プラグインで剥がれる・全体影響を避けるため）。
+    既にstyle属性を持つタグはスキップ（二重付与防止）。呼び出し側でtry/exceptで囲み、
+    失敗時は素のHTMLのまま投稿を続行すること（投稿は絶対止めない）。"""
+    NAVY = "#0a1a4a"
+    BLUE = "#d4af37"
+    LEAD_BG = "#f8f4e0"
+    html = re.sub(r'<h2(?![^>]*style=)>',
+        f'<h2 style="font-size:22px;color:{NAVY};border-left:7px solid {BLUE};'
+        f'border-bottom:3px solid {NAVY};padding:6px 0 8px 12px;margin:46px 0 16px;'
+        f'line-height:1.5;">', html, flags=re.I)
+    html = re.sub(r'<h3(?![^>]*style=)>',
+        f'<h3 style="font-size:18px;color:{NAVY};border-left:4px solid {BLUE};'
+        f'padding-left:10px;margin:28px 0 10px;line-height:1.5;">', html, flags=re.I)
+    html = re.sub(r'<table(?![^>]*style=)>',
+        '<table style="width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;">',
+        html, flags=re.I)
+    html = re.sub(r'<th(?![^>]*style=)>',
+        f'<th style="border:1px solid #dde3ee;padding:10px;text-align:center;'
+        f'background:{NAVY};color:#fff;">', html, flags=re.I)
+    html = re.sub(r'<td(?![^>]*style=)>',
+        '<td style="border:1px solid #dde3ee;padding:10px;">', html, flags=re.I)
+    html = re.sub(r'<p(?![^>]*style=)>(.*?)</p>',
+        lambda m: (f'<p style="background:{LEAD_BG};border-left:5px solid {BLUE};'
+                   f'padding:14px 18px;border-radius:0 8px 8px 0;font-size:15.5px;'
+                   f'margin:16px 0;">{m.group(1)}</p>'),
+        html, count=1, flags=re.I | re.S)
+    html = re.sub(r'<p(?![^>]*style=)>(\s*<strong>【結論】.*?</strong>\s*)</p>',
+        lambda m: (f'<p style="background:#fff8e6;border-left:5px solid #f4a261;'
+                   f'padding:12px 16px;margin:14px 0;border-radius:0 6px 6px 0;">'
+                   f'{m.group(1)}</p>'),
+        html, flags=re.I | re.S)
+    return html
+
+
 def make_article(kw):
     http_client = httpx.Client(verify=False, timeout=300.0)
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, http_client=http_client)
@@ -572,6 +608,11 @@ def make_article(kw):
         return msg.content[0].text
 
     article = retry(_call_claude, label="Claude API", attempts=3, wait=30)
+    # 本文レイアウト装飾（視認性向上・フォールバック付き＝失敗しても素のHTMLで投稿継続）
+    try:
+        article = style_article_html(article)
+    except Exception as e:
+        print(f"[WARN] 本文レイアウト装飾に失敗（素のHTMLで続行）: {e}")
     validate_article(article, min_chars=3500)
     aff_html_1 = make_affiliate_html(kw)
     aff_html_2 = make_affiliate_html(kw)
