@@ -270,7 +270,7 @@ def wrap_text(draw, text, font, max_width):
     return lines
 
 
-def generate_eyecatch(title, kw):
+def generate_eyecatch_legacy(title, kw):
     W, H = 1200, 630
     img = Image.new("RGB", (W, H))
     draw = ImageDraw.Draw(img)
@@ -328,6 +328,68 @@ def generate_eyecatch(title, kw):
     buf = io.BytesIO()
     img.save(buf, "WEBP", quality=85, method=6)
     return buf.getvalue()
+
+
+def generate_eyecatch_v2(title, kw):
+    W, H = 1200, 630
+    bg_start = (10, 20, 60)
+    bg_end = (20, 40, 100)
+    accent = (212, 175, 55)
+    img = Image.new("RGB", (W, H))
+    draw = ImageDraw.Draw(img)
+    for y in range(H):
+        r = int(bg_start[0] + (bg_end[0] - bg_start[0]) * y / H)
+        g = int(bg_start[1] + (bg_end[1] - bg_start[1]) * y / H)
+        b = int(bg_start[2] + (bg_end[2] - bg_start[2]) * y / H)
+        draw.line([(0, y), (W, y)], fill=(r, g, b))
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    od.text((860, 150), "¥", font=get_font(330), fill=(212, 175, 55, 38))
+    img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, W, 10], fill=accent)
+    draw.rectangle([0, H - 10, W, H], fill=accent)
+    font_badge = get_font(28)
+    badge_text = f"# {kw}"
+    bbox = draw.textbbox((0, 0), badge_text, font=font_badge)
+    bw = bbox[2] - bbox[0] + 30
+    draw.rounded_rectangle([60, 52, 60 + bw, 52 + 46], radius=18, fill=accent)
+    draw.text((75, 60), badge_text, font=font_badge, fill=(10, 20, 60))
+    font_site = get_font(24)
+    site_text = "投資の賢者 | toushi-kenja.com"
+    sb = draw.textbbox((0, 0), site_text, font=font_site)
+    draw.text((W - (sb[2] - sb[0]) - 60, 66), site_text, font=font_site, fill=(240, 222, 150))
+    margin = 70
+    max_w = W - margin - 360
+    chosen_lines, chosen_size = [], 38
+    for fs in [62, 54, 48, 42, 38]:
+        font_t = get_font(fs)
+        lines = wrap_text(draw, title, font_t, max_w)
+        if len(lines) * (fs + 16) <= 300 and len(lines) <= 4:
+            chosen_lines, chosen_size = lines, fs
+            break
+    if not chosen_lines:
+        chosen_lines, chosen_size = wrap_text(draw, title, get_font(38), max_w)[:4], 38
+    font_title = get_font(chosen_size)
+    total_h = len(chosen_lines) * (chosen_size + 16)
+    y = (H - total_h) // 2 + 10
+    for line in chosen_lines:
+        draw.text((margin + 2, y + 2), line, font=font_title, fill=(0, 0, 0))
+        draw.text((margin, y), line, font=font_title, fill=(255, 255, 255))
+        y += chosen_size + 16
+    draw.rectangle([margin, y + 6, margin + 200, y + 16], fill=accent)
+    buf = io.BytesIO()
+    img.save(buf, "WEBP", quality=85, method=6)
+    return buf.getvalue()
+
+
+def generate_eyecatch(title, kw):
+    """v2（新デザイン）を試し、失敗時は現行(legacy)へフォールバック。投稿は止めない。"""
+    try:
+        return generate_eyecatch_v2(title, kw)
+    except Exception as e:
+        print("アイキャッチv2エラー→現行にフォールバック:", str(e))
+        return generate_eyecatch_legacy(title, kw)
 
 
 def upload_media_xmlrpc(server, image_bytes, filename):
