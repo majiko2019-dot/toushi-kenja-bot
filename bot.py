@@ -525,10 +525,14 @@ def style_article_html(html):
     NAVY = "#0a1a4a"
     BLUE = "#d4af37"
     LEAD_BG = "#f8f4e0"
-    html = re.sub(r'<h2(?![^>]*style=)>',
-        f'<h2 style="font-size:22px;color:{NAVY};border-left:7px solid {BLUE};'
-        f'border-bottom:3px solid {NAVY};padding:6px 0 8px 12px;margin:46px 0 16px;'
-        f'line-height:1.5;">', html, flags=re.I)
+    # h2は class="swell-block-..." を付けてSWELLテーマのh2装飾（濃紺塗りつぶし背景＋
+    # ::before上下線）をセレクタの除外条件で無効化し、bot.pyの可読デザインのみ効かせる。
+    # （SWELL: h2:where(:not([class^="swell-block-"])...){background:濃紺;color:#fff} のため、
+    #  上書きしないと bot.pyのcolor濃紺 と SWELL背景濃紺 が重なり色ダブりで読めなくなる）
+    html = re.sub(r'<h2\b[^>]*>',
+        f'<h2 class="swell-block-ckh2" style="background:#fff;font-size:22px;color:{NAVY};'
+        f'border-left:7px solid {BLUE};border-bottom:3px solid {NAVY};'
+        f'padding:6px 0 8px 12px;margin:46px 0 16px;line-height:1.5;">', html, flags=re.I)
     html = re.sub(r'<h3(?![^>]*style=)>',
         f'<h3 style="font-size:18px;color:{NAVY};border-left:4px solid {BLUE};'
         f'padding-left:10px;margin:28px 0 10px;line-height:1.5;">', html, flags=re.I)
