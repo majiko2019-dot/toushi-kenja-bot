@@ -331,56 +331,125 @@ def generate_eyecatch_legacy(title, kw):
 
 
 def generate_eyecatch_v2(title, kw):
+    """ダーク×ゴールドの新デザイン。中央寄せ・自動フィット・単語非分割・バランス重視。
+    黄色枠は「○選」優先、無ければ記事固有キャッチ(generate_accent_copy)をClaudeが判断。"""
     W, H = 1200, 630
-    bg_start = (10, 20, 60)
-    bg_end = (20, 40, 100)
-    accent = (212, 175, 55)
+    SITE_LABEL = "投資の賢者 | toushi-kenja.com"
+    ACCENT_FALLBACK = "初心者から始める資産形成"  # 「○選」が無い記事で黄色枠に入れる最終保険
+    YELLOW = (247, 201, 35)
+    WHITE = (255, 255, 255)
+    MUTED = (165, 168, 178)
+    BG_TOP = (28, 28, 33)
+    BG_BOT = (12, 12, 15)
+
     img = Image.new("RGB", (W, H))
     draw = ImageDraw.Draw(img)
+    # 背景：ダークチャコール縦グラデ
     for y in range(H):
-        r = int(bg_start[0] + (bg_end[0] - bg_start[0]) * y / H)
-        g = int(bg_start[1] + (bg_end[1] - bg_start[1]) * y / H)
-        b = int(bg_start[2] + (bg_end[2] - bg_start[2]) * y / H)
+        r = int(BG_TOP[0] + (BG_BOT[0] - BG_TOP[0]) * y / H)
+        g = int(BG_TOP[1] + (BG_BOT[1] - BG_TOP[1]) * y / H)
+        b = int(BG_TOP[2] + (BG_BOT[2] - BG_TOP[2]) * y / H)
         draw.line([(0, y), (W, y)], fill=(r, g, b))
-    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    od = ImageDraw.Draw(overlay)
-    od.text((860, 150), "¥", font=get_font(330), fill=(212, 175, 55, 38))
-    img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+    # 軽いビネット（四隅を沈める）
+    vig = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    vd = ImageDraw.Draw(vig)
+    for i, a in enumerate((50, 34, 20, 10)):
+        m = i * 26
+        vd.rectangle([m, m, W - m, H - m], outline=(0, 0, 0, a), width=26)
+    img = Image.alpha_composite(img.convert("RGBA"), vig).convert("RGB")
     draw = ImageDraw.Draw(img)
-    draw.rectangle([0, 0, W, 10], fill=accent)
-    draw.rectangle([0, H - 10, W, H], fill=accent)
-    font_badge = get_font(28)
-    badge_text = f"# {kw}"
-    bbox = draw.textbbox((0, 0), badge_text, font=font_badge)
-    bw = bbox[2] - bbox[0] + 30
-    draw.rounded_rectangle([60, 52, 60 + bw, 52 + 46], radius=18, fill=accent)
-    draw.text((75, 60), badge_text, font=font_badge, fill=(10, 20, 60))
-    font_site = get_font(24)
-    site_text = "投資の賢者 | toushi-kenja.com"
-    sb = draw.textbbox((0, 0), site_text, font=font_site)
-    draw.text((W - (sb[2] - sb[0]) - 60, 66), site_text, font=font_site, fill=(240, 222, 150))
-    margin = 70
-    max_w = W - margin - 360
-    chosen_lines, chosen_size = [], 38
-    for fs in [62, 54, 48, 42, 38]:
-        font_t = get_font(fs)
-        lines = wrap_text(draw, title, font_t, max_w)
-        if len(lines) * (fs + 16) <= 300 and len(lines) <= 4:
-            chosen_lines, chosen_size = lines, fs
+    # 内側の細い白フレーム
+    draw.rounded_rectangle([26, 26, W - 26, H - 26], radius=14,
+                           outline=WHITE, width=3)
+    # キーワードバッジ（黄ピル・左上）
+    fb = get_font(30)
+    badge = f"#{kw}"
+    bw = draw.textlength(badge, font=fb)
+    draw.rounded_rectangle([64, 60, 64 + bw + 40, 60 + 52], radius=26, fill=YELLOW)
+    draw.text((84, 70), badge, font=fb, fill=(20, 20, 24))
+    # サイト名（右上・控えめ）
+    fsf = get_font(24)
+    sw = draw.textlength(SITE_LABEL, font=fsf)
+    draw.text((W - sw - 64, 74), SITE_LABEL, font=fsf, fill=MUTED)
+    # タイトル（中央寄せ・自動フィット・影付き）
+    margin = 96
+    max_w = W - margin * 2
+    chosen, size = [], 40
+    for fsz in [72, 64, 56, 50, 44, 40]:
+        ft = get_font(fsz)
+        ls = wrap_text(draw, title, ft, max_w)
+        if len(ls) * (fsz + 18) <= 300 and len(ls) <= 3:
+            chosen, size = ls, fsz
             break
-    if not chosen_lines:
-        chosen_lines, chosen_size = wrap_text(draw, title, get_font(38), max_w)[:4], 38
-    font_title = get_font(chosen_size)
-    total_h = len(chosen_lines) * (chosen_size + 16)
-    y = (H - total_h) // 2 + 10
-    for line in chosen_lines:
-        draw.text((margin + 2, y + 2), line, font=font_title, fill=(0, 0, 0))
-        draw.text((margin, y), line, font=font_title, fill=(255, 255, 255))
-        y += chosen_size + 16
-    draw.rectangle([margin, y + 6, margin + 200, y + 16], fill=accent)
+    if not chosen:
+        chosen, size = wrap_text(draw, title, get_font(40), max_w)[:3], 40
+    ft = get_font(size)
+    line_h = size + 18
+    total_h = len(chosen) * line_h
+    y = (H - total_h) // 2 + 24
+    for line in chosen:
+        lw = draw.textlength(line, font=ft)
+        x = (W - lw) // 2
+        draw.text((x + 3, y + 3), line, font=ft, fill=(0, 0, 0))   # 影
+        draw.text((x, y), line, font=ft, fill=WHITE)
+        y += line_h
+    # タイトル下の黄色アクセントピル（常に表示・中央・黒文字）。優先順位：
+    # ①タイトルの「○選」 ②記事生成時にClaudeが判断した記事固有キャッチ ③固定保険(ACCENT_FALLBACK)
+    m_sen = re.search(r'(\d+)\s*選', title)
+    if m_sen:
+        accent_text = f"{m_sen.group(1)}選"
+    else:
+        accent_text = generate_accent_copy(title, kw) or ACCENT_FALLBACK
+    print("黄色枠コピー:", accent_text)
+    max_pill_w = W - 160
+    fac = get_font(34)
+    for afs in (34, 30, 26, 22):
+        fac = get_font(afs)
+        abbox = draw.textbbox((0, 0), accent_text, font=fac)
+        if (abbox[2] - abbox[0]) + 56 <= max_pill_w:
+            break
+    atw = abbox[2] - abbox[0]
+    ath = abbox[3] - abbox[1]
+    pill_w, pill_h = atw + 56, 56
+    apx = (W - pill_w) // 2
+    apy = y + 8
+    draw.rounded_rectangle([apx, apy, apx + pill_w, apy + pill_h],
+                           radius=pill_h // 2, fill=YELLOW)
+    draw.text((apx + (pill_w - atw) // 2 - abbox[0],
+               apy + (pill_h - ath) // 2 - abbox[1]),
+              accent_text, font=fac, fill=(20, 20, 24))
     buf = io.BytesIO()
     img.save(buf, "WEBP", quality=85, method=6)
     return buf.getvalue()
+
+
+def generate_accent_copy(title, kw):
+    """アイキャッチ黄色枠用の短いキャッチ(全角13字前後)を記事タイトルから生成。
+    記事生成時にClaude（haiku・軽量）が記事内容に合わせて判断する。失敗時はNone（固定保険へ）。"""
+    try:
+        http_client = httpx.Client(verify=False, timeout=60.0)
+        client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, http_client=http_client)
+        prompt = (
+            f"記事タイトル：{title}\n\n"
+            "この記事のアイキャッチ画像のバッジに入れる短いキャッチコピーを1つだけ作ってください。\n"
+            "条件：全角12文字以内／体言止め（名詞で終え、語の途中で切らない）／"
+            "記事内容に即して読者がクリックしたくなる／"
+            "記号・引用符・ハッシュタグ・「」・句点は付けない／日本語のみ／"
+            "前置きや説明は書かずキャッチコピー本文だけを出力。"
+        )
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=40,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = "".join(getattr(b, "text", "") for b in msg.content).strip()
+        text = text.splitlines()[0].strip().strip("「」\"'# 　。!！") if text else ""
+        if not text or len(text) > 16:
+            return None
+        return text
+    except Exception as e:
+        print("[WARN] アクセントコピー生成失敗→固定保険へ:", str(e))
+        return None
 
 
 def generate_eyecatch(title, kw):
