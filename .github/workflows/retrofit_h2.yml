@@ -1,0 +1,31 @@
+name: Retrofit h2 colors
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "DRY_RUN (1=変更なし/ログのみ, 0=実更新)"
+        required: true
+        default: "1"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  retrofit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install anthropic httpx requests urllib3 Pillow
+      - name: Run retrofit
+        run: python retrofit_h2.py
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          TOUSHI_WP_USERNAME: ${{ secrets.TOUSHI_WP_USERNAME }}
+          TOUSHI_WP_APP_PASSWORD: ${{ secrets.TOUSHI_WP_APP_PASSWORD }}
