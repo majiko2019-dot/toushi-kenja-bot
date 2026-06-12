@@ -146,6 +146,8 @@ AFFILIATE_LINKS = {
     # 不動産投資系
     "クロスハウス（不動産管理・空室対策）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+9FD5WQ+4EZ2+NTJWY",
     "JPリターンズ（マンション投資・無料面談）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+AP7JHM+40OC+BWVTE",
+    "JPリターンズ（マンション投資・個別面談）": "https://h.accesstrade.net/sp/cc?rk=0100py6x00ot1y",
+    "JPリターンズ（マンション投資・動画視聴）": "https://h.accesstrade.net/sp/cc?rk=0100pgkc00ot1y",
     "不動産投資ドットコム（企業比較・紹介）": "https://af.moshimo.com/af/c/click?a_id=5580543&p_id=3600&pc_id=8700&pl_id=50665",
     "音羽トレンディ（新築一戸建・仲介手数料無料）": "https://af.moshimo.com/af/c/click?a_id=5580542&p_id=4123&pc_id=10449&pl_id=56548",
     "Oh!Ya（不動産投資一括資料請求）": "https://af.moshimo.com/af/c/click?a_id=5580538&p_id=4996&pc_id=13383&pl_id=66149",
