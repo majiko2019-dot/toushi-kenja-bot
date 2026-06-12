@@ -154,6 +154,7 @@ AFFILIATE_LINKS = {
     "PayPay証券": "https://toushi-kenja.com",
     "JFX（2025年オリコン顧客満足度FX総合1位）": "https://px.a8.net/svt/ejp?a8mat=4B3U75+8EGAEI+25B2+5YZ76",
     "ALTERNA（オルタナ・三井物産グループデジタル証券）": "https://px.a8.net/svt/ejp?a8mat=4B3U75+9713FU+5PYG+5YJRM",
+    "セントラル短資FX（老舗短資系のFX口座）": "https://click.j-a-net.jp/2450594/528989/",
     # 不動産投資系
     "クロスハウス（不動産管理・空室対策）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+9FD5WQ+4EZ2+NTJWY",
     "JPリターンズ（マンション投資・無料面談）": "https://px.a8.net/svt/ejp?a8mat=4B3WJ8+AP7JHM+40OC+BWVTE",
