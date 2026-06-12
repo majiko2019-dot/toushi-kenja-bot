@@ -1,0 +1,33 @@
+name: 空CTA記事へ実リンク埋め戻し（手動）
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "1=DRY_RUN（変更なし）, 0=実更新"
+        required: true
+        default: "1"
+
+jobs:
+  backfill-cta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install anthropic pillow
+      - name: Run backfill_cta
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          TOUSHI_WP_USERNAME: ${{ secrets.TOUSHI_WP_USERNAME }}
+          TOUSHI_WP_APP_PASSWORD: ${{ secrets.TOUSHI_WP_APP_PASSWORD }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: python backfill_cta.py
+      - name: Upload backup artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-cta-backup
+          path: backup_backfill/
