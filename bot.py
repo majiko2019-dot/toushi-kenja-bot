@@ -226,6 +226,61 @@ KEYWORDS = [
 ]
 
 
+def _fetch_existing_titles():
+    """公開済み投稿のタイトル一覧をREST APIで取得（認証不要）。重複テーマ判定に使う。"""
+    titles = []
+    page = 1
+    try:
+        client = httpx.Client(verify=False, timeout=30.0)
+        while True:
+            r = client.get(WP_URL + "/wp-json/wp/v2/posts",
+                           params={"status": "publish", "per_page": 100,
+                                   "page": page, "_fields": "title"})
+            if r.status_code != 200:
+                break
+            batch = r.json()
+            if not batch:
+                break
+            for p in batch:
+                t = p.get("title", {}).get("rendered", "")
+                if t:
+                    titles.append(t)
+            if len(batch) < 100:
+                break
+            page += 1
+        client.close()
+    except Exception as e:
+        print(f"[WARN] 既存タイトル取得失敗: {e}")
+    return titles
+
+
+def _keyword_already_posted(kw, titles):
+    """キーワードの主要トークン（先頭2語）が既存タイトルに揃って含まれていれば既出とみなす"""
+    tokens = [t for t in kw.split() if t][:2]
+    if not tokens:
+        return False
+    for title in titles:
+        if all(tok in title for tok in tokens):
+            return True
+    return False
+
+
+def choose_keyword():
+    """既出テーマを避けてキーワードを選ぶ。
+
+    同一キーワードの再選択による類似記事の量産（スラッグ -2 重複・共食い）を防ぐ。
+    全キーワードが投稿済みの場合のみ通常のランダム選択にフォールバックする。
+    """
+    titles = _fetch_existing_titles()
+    fresh = [kw for kw in KEYWORDS if not _keyword_already_posted(kw, titles)]
+    if fresh:
+        chosen = random.choice(fresh)
+        print(f"[INFO] 未投稿キーワードから選択（候補 {len(fresh)}/{len(KEYWORDS)}）: {chosen}")
+        return chosen
+    print(f"[WARN] 全{len(KEYWORDS)}キーワードが投稿済み。重複回避不可のため通常ランダム選択にフォールバック")
+    return random.choice(KEYWORDS)
+
+
 def get_font(size):
     font_paths = [
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
@@ -794,7 +849,7 @@ def main():
     start = datetime.now(JST)
     print(f"[START] {start.strftime('%Y-%m-%d %H:%M:%S JST')}")
     check_env(["CLAUDE_API_KEY", "TOUSHI_WP_USERNAME", "TOUSHI_WP_APP_PASSWORD"])
-    kw = random.choice(KEYWORDS)
+    kw = choose_keyword()
     print("キーワード:", kw)
     print("記事を生成中... (1〜2分かかります)")
     html = make_article(kw)
