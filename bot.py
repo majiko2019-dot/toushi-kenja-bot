@@ -166,7 +166,6 @@ AFFILIATE_LINKS = {
     "DMM 株（DMM.com証券）": "https://h.accesstrade.net/sp/cc?rk=0100mkk200ot1y",
     "mattoco+（投資信託）": "https://h.accesstrade.net/sp/cc?rk=0100pgel00ot1y",
     "TOSSY（投資サービス）": "https://h.accesstrade.net/sp/cc?rk=0100q1qf00ot1y",
-    "moomoo証券（手数料無料・米国株・NISA対応）": "https://h.accesstrade.net/sp/cc?rk=0100pd0z00ot1y",
     "Funds（ファンズ・貸付投資）": "https://h.accesstrade.net/sp/cc?rk=0100nc2600ot1y",
     "FXブロードネット": "https://h.accesstrade.net/sp/cc?rk=01002z1400ot1y",
     "ファイナンシャルアカデミー（お金の教養・投資スクール）": "https://af.moshimo.com/af/c/click?a_id=5580541&p_id=4629&pc_id=12135&pl_id=61676",
