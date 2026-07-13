@@ -11,6 +11,9 @@ import time
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
+# GitHub Actions（本番cron）ではSSL証明書検証を有効化。ローカル(AvastのTLS傍受等)実行時のみ無効化。
+_SSL_VERIFY = os.environ.get("GITHUB_ACTIONS") == "true"
+
 JST = timezone(timedelta(hours=9))
 
 
@@ -233,7 +236,7 @@ def _fetch_existing_titles():
     titles = []
     page = 1
     try:
-        client = httpx.Client(verify=False, timeout=30.0)
+        client = httpx.Client(verify=_SSL_VERIFY, timeout=30.0)
         while True:
             r = client.get(WP_URL + "/wp-json/wp/v2/posts",
                            params={"status": "publish", "per_page": 100,
@@ -478,7 +481,7 @@ def generate_accent_copy(title, kw):
     """アイキャッチ黄色枠用の短いキャッチ(全角13字前後)を記事タイトルから生成。
     記事生成時にClaude（haiku・軽量）が記事内容に合わせて判断する。失敗時はNone（固定保険へ）。"""
     try:
-        http_client = httpx.Client(verify=False, timeout=60.0)
+        http_client = httpx.Client(verify=_SSL_VERIFY, timeout=60.0)
         client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, http_client=http_client)
         prompt = (
             f"記事タイトル：{title}\n\n"
@@ -678,7 +681,7 @@ def style_article_html(html):
 
 
 def make_article(kw):
-    http_client = httpx.Client(verify=False, timeout=300.0)
+    http_client = httpx.Client(verify=_SSL_VERIFY, timeout=300.0)
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, http_client=http_client)
     year = datetime.now().year
     t = f"あなたはFX・株式投資・証券口座に精通したSEOとアフィリエイト収益化のプロライターです。\n"
@@ -805,8 +808,9 @@ def get_categories(kw):
 def post(title, content, kw):
     try:
         context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
+        if not _SSL_VERIFY:
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
         server = xmlrpc.client.ServerProxy(WP_URL + "/xmlrpc.php", context=context)
 
         thumbnail_id = None
