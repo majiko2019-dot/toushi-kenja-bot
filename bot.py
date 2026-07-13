@@ -13,17 +13,6 @@ from PIL import Image, ImageDraw, ImageFont
 
 JST = timezone(timedelta(hours=9))
 
-def get_publish_datetime():
-    """当日20:00 JSTを返す。22時以降は翌日20:00に回す（GitHub Actions遅延考慮）"""
-    now = datetime.now(JST)
-    target = now.replace(hour=20, minute=0, second=0, microsecond=0)
-    if now.hour >= 22:
-        target += timedelta(days=1)
-    return target
-
-import time
-import sys
-
 
 def get_existing_future_dates(server):
     """既存future投稿の日付(YYYYMMDD)セット"""
@@ -289,9 +278,11 @@ def choose_keyword():
     if fresh:
         chosen = random.choice(fresh)
         print(f"[INFO] 未投稿キーワードから選択（候補 {len(fresh)}/{len(KEYWORDS)}）: {chosen}")
-        return chosen
-    print(f"[WARN] 全{len(KEYWORDS)}キーワードが投稿済み。重複回避不可のため通常ランダム選択にフォールバック")
-    return random.choice(KEYWORDS)
+    else:
+        print(f"[WARN] 全{len(KEYWORDS)}キーワードが投稿済み。重複回避不可のため通常ランダム選択にフォールバック")
+        chosen = random.choice(KEYWORDS)
+    # KEYWORDS内の固定年号(2026等)を当年に自動置換し、翌年の陳腐化を防ぐ
+    return re.sub(r'20\d{2}', str(datetime.now(JST).year), chosen)
 
 
 def get_font(size):
@@ -689,7 +680,6 @@ def style_article_html(html):
 def make_article(kw):
     http_client = httpx.Client(verify=False, timeout=300.0)
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, http_client=http_client)
-    from datetime import datetime
     year = datetime.now().year
     t = f"あなたはFX・株式投資・証券口座に精通したSEOとアフィリエイト収益化のプロライターです。\n"
     t += f"現在の年は{year}年です。タイトルや本文に年を記載する場合は必ず{year}年と書いてください。\n"
@@ -705,7 +695,7 @@ def make_article(kw):
     t += "・最初の100字以内にキーワードを入れてリード文を書く\n"
     t += "・リード文の直後に『結論先出し』ブロックを置き、忙しい読者向けに要点を3行で先に提示する\n\n"
     t += "・各h2見出しの直後に、その見出しが投げかける問いへ40字前後で即答する一文を「<p><strong>【結論】（40字前後で要点）</strong></p>」の形で必ず置き、その後にh3で詳しく展開する（AI検索・AI Overviewに引用されやすくするため）\n\n"
-    t += "・記事中の重要な数値やデータには、その直後に「（出典：◯◯公式・2026年時点）」のように出典を簡潔に添える（信頼性とAI検索での引用のため）\n\n"
+    t += f"・記事中の重要な数値やデータには、その直後に「（出典：◯◯公式・{year}年時点）」のように出典を簡潔に添える（信頼性とAI検索での引用のため）\n\n"
     t += "【E-E-A-T（専門性・信頼性）】\n"
     t += "・公式情報や具体的な事実に基づいて書き、根拠のない断定や誇大表現は避ける\n"
     t += "・メリットだけでなくデメリット・注意点も正直に書く（中立性で信頼を得る）\n"
