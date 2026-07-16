@@ -6,6 +6,7 @@ import random
 import re
 import os
 import io
+import unicodedata
 from datetime import datetime, timezone, timedelta
 import time
 import sys
@@ -259,31 +260,133 @@ def _fetch_existing_titles():
     return titles
 
 
+def _fetch_queued_titles():
+    """予約(future)・下書き(draft)・保留(pending)投稿のタイトルをXML-RPCで取得。
+
+    公開済み(publish)しか見ないと、自分が予約キューに積んだ記事が重複判定から漏れる。
+    予約は20:00公開＋日付衝突で翌日送りのため、キューは常時1〜2日分たまっており、
+    同じKWを連日選んでスラッグ -2/-3 の重複記事を量産していた（2026-07-17 P0止血）。
+    """
+    titles = []
+    try:
+        context = ssl.create_default_context()
+        if not _SSL_VERIFY:
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+        server = xmlrpc.client.ServerProxy(WP_URL + "/xmlrpc.php", context=context)
+        for status in ("future", "draft", "pending"):
+            try:
+                posts = server.wp.getPosts(0, WP_USERNAME, WP_APP_PASSWORD,
+                    {"post_status": status, "number": 100, "post_type": "post"})
+                titles += [p.get("post_title", "") for p in posts if p.get("post_title")]
+            except Exception as e:
+                print(f"[WARN] {status}投稿のタイトル取得失敗: {e}")
+    except Exception as e:
+        print(f"[WARN] 予約キューのタイトル取得失敗: {e}")
+    return titles
+
+
+_KNOWN_TITLES_CACHE = None
+
+
+def _all_known_titles():
+    """公開済み＋予約キューの全タイトル（1実行内でキャッシュ）"""
+    global _KNOWN_TITLES_CACHE
+    if _KNOWN_TITLES_CACHE is None:
+        published = _fetch_existing_titles()
+        queued = _fetch_queued_titles()
+        _KNOWN_TITLES_CACHE = published + queued
+        print(f"[INFO] 重複判定の照合対象: 公開{len(published)}本 + 予約/下書き{len(queued)}本 = {len(_KNOWN_TITLES_CACHE)}本")
+    return _KNOWN_TITLES_CACHE
+
+
+def _norm(s):
+    """タイトル/KWの正規化: NFKC・小文字化・年号除去・記号/空白除去"""
+    s = unicodedata.normalize("NFKC", s or "").lower()
+    s = re.sub(r"20\d{2}", "", s)
+    s = re.sub(r"[\s　【】\[\]()（）｜|・、。,.!！?？~〜\-—–_/／:：;；\"'’”「」]", "", s)
+    return s
+
+
+def _ident_tokens(kw):
+    """KWの識別トークン。ブランド語尾「カード」は残り2字以上の時だけ落とす。
+
+    語尾除去の対象は4bot共通で「カード」のみ（card-kenjaで実証済みの実装をそのまま使う）。
+    投資系KWのブランド語尾「証券」は落とさない：「ネット証券」→「ネット」のように
+    汎用語へ潰れ、無関係な記事で既出と誤判定してKWを枯渇させるため（下記の旧実装の
+    失敗モードと同じ穴になる）。
+    """
+    tokens = []
+    for t in (kw or "").split():
+        n = _norm(t)
+        if not n:
+            continue
+        if n.endswith("カード") and len(n) > 4:
+            n = n[:-3]
+        if n:
+            tokens.append(n)
+    return tokens
+
+
+def _title_already_known(title):
+    """生成タイトルが既存記事と正規化後に完全一致すれば重複とみなす（最後の砦）。
+
+    類似度による判定は採用しない。実測でANAカード記事とJALカード記事の類似度が0.765、
+    実際の重複ペアが0.659〜0.800と分離不能で、正当な別記事を止める危険があるため。
+    """
+    nt = _norm(title)
+    if not nt:
+        return False
+    return any(_norm(t) == nt for t in _all_known_titles())
+
+
+_KW_FREQ = {}
+for _kw in KEYWORDS:
+    for _t in set(_ident_tokens(_kw)):
+        _KW_FREQ[_t] = _KW_FREQ.get(_t, 0) + 1
+
+
 def _keyword_already_posted(kw, titles):
-    """キーワードの主要トークン（先頭2語）が既存タイトルに揃って含まれていれば既出とみなす"""
-    tokens = [t for t in kw.split() if t][:2]
+    """KWの識別トークンの「署名」で既出を判定する。
+
+    署名の作り方: KEYWORDS 全体で1回しか出てこないトークン（＝そのテーマ固有語）があれば
+    それを署名とし、既存タイトルのどれかに現れれば既出とみなす。固有語が無いKWは
+    最も希少な2語の両方一致で判定する。
+
+    「KWの全単語がタイトルに含まれるか」で判定してはならない。AI生成タイトルは元KWの語を
+    そのまま全部は含まないため（例: KW『ホームページ 制作費用 内訳 何にかかる』に対し
+    タイトルは「何にいくらかかる」等と書き換わる）、全語一致では既出を取りこぼして
+    重複記事を生む。本方式は hp-chiba-bot の先行実装（頻度署名）に、表記ゆれ対策の
+    正規化（_norm/_ident_tokens）を足したもの。実測で card の既知重複6/6を検知し、
+    全語一致方式が hp-chiba で取りこぼした3件も検知する（2026-07-17 P0止血）。
+    """
+    tokens = _ident_tokens(kw)
     if not tokens:
         return False
-    for title in titles:
-        if all(tok in title for tok in tokens):
-            return True
-    return False
+    ntitles = [_norm(t) for t in titles]
+    unique = [t for t in tokens if _KW_FREQ.get(t, 0) == 1]
+    if unique:
+        return any(any(t in nt for t in unique) for nt in ntitles)
+    rare2 = sorted(set(tokens), key=lambda t: (_KW_FREQ.get(t, 0), t))[:2]
+    return any(all(t in nt for t in rare2) for nt in ntitles)
 
 
 def choose_keyword():
     """既出テーマを避けてキーワードを選ぶ。
 
     同一キーワードの再選択による類似記事の量産（スラッグ -2 重複・共食い）を防ぐ。
-    全キーワードが投稿済みの場合のみ通常のランダム選択にフォールバックする。
+    照合対象は公開済みだけでなく予約(future)/下書き/保留キューも含む。
+    全キーワードが投稿済み/予約済みなら None を返し、当日は投稿しない
+    （randomフォールバックは確実に重複を生むため 2026-07-17 に廃止）。
     """
-    titles = _fetch_existing_titles()
+    titles = _all_known_titles()
     fresh = [kw for kw in KEYWORDS if not _keyword_already_posted(kw, titles)]
-    if fresh:
-        chosen = random.choice(fresh)
-        print(f"[INFO] 未投稿キーワードから選択（候補 {len(fresh)}/{len(KEYWORDS)}）: {chosen}")
-    else:
-        print(f"[WARN] 全{len(KEYWORDS)}キーワードが投稿済み。重複回避不可のため通常ランダム選択にフォールバック")
-        chosen = random.choice(KEYWORDS)
+    if not fresh:
+        print(f"[SKIP-DUP] 全{len(KEYWORDS)}キーワードが投稿済み/予約済みです。"
+              f"重複記事の量産を避けるため本日は投稿しません。KEYWORDS の補充が必要です。")
+        return None
+    chosen = random.choice(fresh)
+    print(f"[INFO] 未投稿キーワードから選択（候補 {len(fresh)}/{len(KEYWORDS)}）: {chosen}")
     # KEYWORDS内の固定年号(2026等)を当年に自動置換し、翌年の陳腐化を防ぐ
     return re.sub(r'20\d{2}', str(datetime.now(JST).year), chosen)
 
@@ -857,11 +960,18 @@ def main():
     print(f"[START] {start.strftime('%Y-%m-%d %H:%M:%S JST')}")
     check_env(["CLAUDE_API_KEY", "TOUSHI_WP_USERNAME", "TOUSHI_WP_APP_PASSWORD"])
     kw = choose_keyword()
+    if kw is None:
+        print(f"[END] {datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S JST')} 重複回避のためスキップ（投稿なし）")
+        return
     print("キーワード:", kw)
     print("記事を生成中... (1〜2分かかります)")
     html = make_article(kw)
     title = get_title(html)
     print("タイトル:", title)
+    if _title_already_known(title):
+        print(f"[SKIP-DUP] 生成タイトルが既存記事と完全一致するため投稿を中止します: {title}")
+        print(f"[END] {datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S JST')} 重複回避のためスキップ（投稿なし）")
+        return
     print("WordPressに投稿中...")
     post(title, html, kw)
     end = datetime.now(JST)
