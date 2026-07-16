@@ -232,57 +232,58 @@ KEYWORDS = [
 ]
 
 
-def _fetch_existing_titles():
-    """公開済み投稿のタイトル一覧をREST APIで取得（認証不要）。重複テーマ判定に使う。"""
+def _make_server():
+    """XML-RPC接続を作る（投稿と同じ経路＝本番から確実に到達できる）"""
+    context = ssl.create_default_context()
+    if not _SSL_VERIFY:
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+    return xmlrpc.client.ServerProxy(WP_URL + "/xmlrpc.php", context=context)
+
+
+def _fetch_titles_by_status(status):
+    """指定ステータスの投稿タイトルをXML-RPCで全件取得（100件ずつページ送り）"""
     titles = []
-    page = 1
     try:
-        client = httpx.Client(verify=_SSL_VERIFY, timeout=30.0)
+        server = _make_server()
+        offset = 0
         while True:
-            r = client.get(WP_URL + "/wp-json/wp/v2/posts",
-                           params={"status": "publish", "per_page": 100,
-                                   "page": page, "_fields": "title"})
-            if r.status_code != 200:
+            posts = server.wp.getPosts(0, WP_USERNAME, WP_APP_PASSWORD,
+                {"post_status": status, "number": 100, "offset": offset,
+                 "post_type": "post"})
+            if not posts:
                 break
-            batch = r.json()
-            if not batch:
+            titles += [p.get("post_title", "") for p in posts if p.get("post_title")]
+            if len(posts) < 100:
                 break
-            for p in batch:
-                t = p.get("title", {}).get("rendered", "")
-                if t:
-                    titles.append(t)
-            if len(batch) < 100:
-                break
-            page += 1
-        client.close()
+            offset += 100
     except Exception as e:
-        print(f"[WARN] 既存タイトル取得失敗: {e}")
+        print(f"[WARN] {status}投稿のタイトル取得失敗: {e}")
     return titles
 
 
-def _fetch_queued_titles():
-    """予約(future)・下書き(draft)・保留(pending)投稿のタイトルをXML-RPCで取得。
+def _fetch_existing_titles():
+    """公開済み投稿のタイトル一覧を取得。
 
-    公開済み(publish)しか見ないと、自分が予約キューに積んだ記事が重複判定から漏れる。
-    予約は20:00公開＋日付衝突で翌日送りのため、キューは常時1〜2日分たまっており、
-    同じKWを連日選んでスラッグ -2/-3 の重複記事を量産していた（2026-07-17 P0止血）。
+    以前は REST(wp-json) で取得していたが、GitHub Actions からのRESTアクセスは遮断され、
+    本番では常に0本が返っていた（実ログ「[INFO] 重複判定の照合対象: 公開0本」。同じ取得を
+    ローカルから行うと48本返る）。その結果、重複判定は本番で一度も機能せず、全KWが未投稿扱い
+    ＝実質ランダム選択となって同一テーマを量産していた（funabashi「西船橋の外壁塗装業者
+    おすすめ比較7選」が4本、card「JCBゴールドカードおすすめ」が5本など）。
+    投稿と同じXML-RPC経路に統一して確実に取得する（2026-07-17 P0止血）。
+    """
+    return _fetch_titles_by_status("publish")
+
+
+def _fetch_queued_titles():
+    """予約(future)・下書き(draft)・保留(pending)投稿のタイトルを取得。
+
+    公開済みだけ見ると自分が予約キューに積んだ記事が重複判定から漏れる。予約は20:00公開＋
+    日付衝突で翌日送りのためキューは常時1〜2日分たまり、同じKWを連日選ぶ原因になる。
     """
     titles = []
-    try:
-        context = ssl.create_default_context()
-        if not _SSL_VERIFY:
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
-        server = xmlrpc.client.ServerProxy(WP_URL + "/xmlrpc.php", context=context)
-        for status in ("future", "draft", "pending"):
-            try:
-                posts = server.wp.getPosts(0, WP_USERNAME, WP_APP_PASSWORD,
-                    {"post_status": status, "number": 100, "post_type": "post"})
-                titles += [p.get("post_title", "") for p in posts if p.get("post_title")]
-            except Exception as e:
-                print(f"[WARN] {status}投稿のタイトル取得失敗: {e}")
-    except Exception as e:
-        print(f"[WARN] 予約キューのタイトル取得失敗: {e}")
+    for status in ("future", "draft", "pending"):
+        titles += _fetch_titles_by_status(status)
     return titles
 
 
