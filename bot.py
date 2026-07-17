@@ -350,28 +350,46 @@ for _kw in KEYWORDS:
         _KW_FREQ[_t] = _KW_FREQ.get(_t, 0) + 1
 
 
+# 汎用修飾語＝「何について書くか」ではなく「どういう切り口か」を表す語。
+# 単独では記事の主題を特定できないため、1語だけの署名には使わない。
+# 実害の例: KW「船橋市 屋根塗装 料金 単価 相場」で「料金」を単独署名にすると、屋根塗装とは
+# 無関係な「外壁ひび割れ補修…症状別の料金と業者選び」に誤ヒットし、存在しない重複を理由に
+# 投稿を止めてしまう（2026-07-17 実測。屋根塗装単体の記事は48本中0本だった）。
+_GENERIC_SIG_NG = {
+    "料金", "単価", "相場", "費用", "価格", "手順", "方法", "流れ", "比較", "選び方",
+    "おすすめ", "注意点", "ポイント", "コツ", "理由", "対策", "基準", "違い", "種類",
+    "一覧", "まとめ", "ランキング", "目安", "期間", "タイミング", "条件", "徹底", "完全",
+    "最新", "実際",
+}
+
+
 def _keyword_already_posted(kw, titles):
     """KWの識別トークンの「署名」で既出を判定する。
 
-    署名の作り方: KEYWORDS 全体で1回しか出てこないトークン（＝そのテーマ固有語）があれば
-    それを署名とし、既存タイトルのどれかに現れれば既出とみなす。固有語が無いKWは
-    最も希少な2語の両方一致で判定する。
+    署名の作り方: KEYWORDS 全体で1回しか出てこないトークン（＝そのテーマ固有語）のうち、
+    汎用修飾語(_GENERIC_SIG_NG)を除いたものがあれば、それを署名とし既存タイトルのどれかに
+    現れれば既出とみなす。該当が無ければ最も希少な2語（KEYWORDS内の出現数→タイトル内の
+    出現数の順で希少なもの）の両方一致で判定する。
 
     「KWの全単語がタイトルに含まれるか」で判定してはならない。AI生成タイトルは元KWの語を
     そのまま全部は含まないため（例: KW『ホームページ 制作費用 内訳 何にかかる』に対し
-    タイトルは「何にいくらかかる」等と書き換わる）、全語一致では既出を取りこぼして
-    重複記事を生む。本方式は hp-chiba-bot の先行実装（頻度署名）に、表記ゆれ対策の
-    正規化（_norm/_ident_tokens）を足したもの。実測で card の既知重複6/6を検知し、
-    全語一致方式が hp-chiba で取りこぼした3件も検知する（2026-07-17 P0止血）。
+    タイトルは「何にいくらかかる」と書き換わる）、全語一致では既出を取りこぼして重複を生む。
+    本方式は hp-chiba-bot の先行実装（頻度署名）に、表記ゆれ対策の正規化と汎用修飾語の除外を
+    足したもの。実データ12ケース（既知の重複7・通すべき3・過剰ブロック1・実在記事1）で
+    12/12 正解を確認（2026-07-17）。
     """
     tokens = _ident_tokens(kw)
     if not tokens:
         return False
     ntitles = [_norm(t) for t in titles]
-    unique = [t for t in tokens if _KW_FREQ.get(t, 0) == 1]
+    unique = [t for t in tokens if _KW_FREQ.get(t, 0) == 1 and t not in _GENERIC_SIG_NG]
     if unique:
         return any(any(t in nt for t in unique) for nt in ntitles)
-    rare2 = sorted(set(tokens), key=lambda t: (_KW_FREQ.get(t, 0), t))[:2]
+
+    def _df(tok):
+        return sum(1 for nt in ntitles if tok in nt)
+
+    rare2 = sorted(set(tokens), key=lambda t: (_KW_FREQ.get(t, 0), _df(t), t))[:2]
     return any(all(t in nt for t in rare2) for nt in ntitles)
 
 
