@@ -23,6 +23,7 @@ jobs:
       - name: Run bot
         run: python bot.py
         env:
+          PYTHONUNBUFFERED: '1'
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           TOUSHI_WP_USERNAME: ${{ secrets.TOUSHI_WP_USERNAME }}
           TOUSHI_WP_APP_PASSWORD: ${{ secrets.TOUSHI_WP_APP_PASSWORD }}
