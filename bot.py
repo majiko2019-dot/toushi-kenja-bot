@@ -10,7 +10,16 @@ import unicodedata
 from datetime import datetime, timezone, timedelta
 import time
 import sys
+import socket
 from PIL import Image, ImageDraw, ImageFont
+
+# Claude API無応答での長時間ハング対策（programming-kenja / hp-chiba で実証済みの設定を横展開）。
+# 全ネット処理の安全網。これが無いと httpx のリトライが積み上がり、workflow の timeout-minutes:20 に
+# 達して GitHub に cancelled される。cancelled は failure ではないため retry_on_failure.yml も
+# Layer3監視も発火せず、「実行はされたが記事は作られていない日」が無音で発生する。
+# 実測（2026-07-17）: tenshoku 7/11・7/14・7/17 / toushi 7/11・7/12 / card 7/17 / funabashi 7/17 が
+# いずれも1220秒＝20分ちょうどで cancelled。常態は130〜176秒。
+socket.setdefaulttimeout(180)
 
 # GitHub Actions（本番cron）ではSSL証明書検証を有効化。ローカル(AvastのTLS傍受等)実行時のみ無効化。
 _SSL_VERIFY = os.environ.get("GITHUB_ACTIONS") == "true"
@@ -806,7 +815,7 @@ def style_article_html(html):
 
 
 def make_article(kw):
-    http_client = httpx.Client(verify=_SSL_VERIFY, timeout=300.0)
+    http_client = httpx.Client(verify=_SSL_VERIFY, timeout=150.0)  # 300→150（リトライ総和をworkflow timeout-minutes:20内に収める・programming/hp-chiba横展開）
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, http_client=http_client)
     year = datetime.now().year
     t = f"あなたはFX・株式投資・証券口座に精通したSEOとアフィリエイト収益化のプロライターです。\n"
