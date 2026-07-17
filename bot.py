@@ -691,12 +691,151 @@ def upload_media_xmlrpc(server, image_bytes, filename):
         return None
 
 
+# ── CTA文脈一致（2026-07-17・programming-kenja / card-kenja で実証済みの方式を移植）─────────
+# 旧実装は random.sample(list(AFFILIATE_LINKS...)) の純粋ランダム抽選だった。その結果、実記事で
+# 「配当金生活」の記事に「リフォームガイド（マンションリノベーション）【公式】無料口座開設はこちら」、
+# 「FX始め方」の記事に「LOCALGOAT（AI検索時代の店舗集客AIO×MEO×SNS）【公式】無料口座開設はこちら」
+# が並んだ（実測）。KWのカテゴリに一致するプールからのみ抽選し、無関係案件を構造的に排除する。
+
+# 案件名から読み取れる事実だけで分類する（推測で決めつけない）。判断に迷うものは general に置く。
+_AFF_CAT_OVERRIDE = {
+    # 名前に「FX」を含むがFX口座ではない周辺サービス（VPS/メルマガ）。fxプールには入れるが
+    # CTA文言は口座開設にしない（_affiliate_cta_of で分岐）。
+    "XServer VPS for FX プレミアム": "fx",
+    "シンクラウドデスクトップ for FX": "fx",
+    "ザイFX！投資戦略メルマガ": "fx",
+    # 「デジタル証券」＝証券。名前から読めるのはそこまで。
+    "ALTERNA（オルタナ・三井物産グループデジタル証券）": "stock",
+    # DMM.com証券のCFD＝レバレッジ取引。FX記事と証券記事のどちらにも掛かるが、
+    # 取引形態が近いFX側に置く。
+    "DMM CFD（DMM.com証券・全銘柄取引手数料0円のCFD）": "fx",
+    # 名前から投資対象・形態が特定できない、または口座系でないもの → general
+    "TOSSY（投資サービス）": "general",
+    "Funds（ファンズ・貸付投資）": "general",
+    # 投資記事の文脈に合わない案件。既定プールにも各KWプールにも入れない（=出さない）。
+    # 店舗集客マーケティング／解体工事／特定属性向けのお金の相談所は、
+    # FX・証券・不動産投資のいずれの読者文脈とも一致しないため。
+    "LOCALGOAT（AI検索時代の店舗集客AIO×MEO×SNS）": "excluded",
+    "解体工事見積りnet（解体工事一括見積り）": "excluded",
+    "NEWDOOR（ゲイのためのお金の相談所・無料面談）": "excluded",
+    # 不動産だが「投資」ではなく実物の売買・工事・権利・相続まわり。
+    # realestate系KWのときだけ補完として出す（既定＝FX・証券からは外す）。
+    "音羽トレンディ（新築一戸建・仲介手数料無料）": "property",
+    "リフォームガイド（マンションリノベーション）": "property",
+    "借地権 無料相談ドットコム": "property",
+    "訳あり物件買取センター（借地権の買取〜売却）": "property",
+    "ミライアス スマート仲介（マンション・戸建・土地査定）": "property",
+    "相続アシスト（相続税申告・手続き一括代行）": "property",
+}
+
+
+def _affiliate_category_of(name):
+    """AFFILIATE_LINKSのキー名（説明文）から案件カテゴリを推定。
+    fx / stock / realestate / property / school / general / excluded。
+    excluded はどのプールにも入れない＝投資記事の文脈に合わない案件を構造的に排除する。"""
+    if name in _AFF_CAT_OVERRIDE:
+        return _AFF_CAT_OVERRIDE[name]
+    if any(w in name for w in ("スクール", "アカデミー", "セミナー", "教養")):
+        return "school"
+    if "不動産投資" in name or "マンション投資" in name:
+        return "realestate"
+    if any(w in name for w in ("FX", "外為", "CFD", "自動売買", "シストレ")):
+        return "fx"
+    if any(w in name for w in ("証券", "株", "投資信託")):
+        return "stock"
+    if "不動産" in name:
+        return "realestate"
+    return "general"
+
+
+def _detect_kw_category(kw):
+    """記事KWから読者カテゴリを判定（fx / stock / realestate / learn / default）。
+    FXと証券の両方を含むKW（例「楽天証券 FX 評判 スプレッド」）はFX記事なのでfxを優先する。"""
+    if any(w in kw for w in ("不動産", "マンション投資", "物件", "家賃", "大家", "アパート経営",
+                             "リノベーション", "リフォーム", "借地", "相続")):
+        return "realestate"
+    if any(w in kw for w in ("FX", "為替", "ドル円", "スキャルピング", "MT4", "自動売買",
+                             "レバレッジ", "スプレッド", "スワップ", "外為", "EA", "ロット",
+                             "デイトレード", "チャートパターン", "通貨ペア", "CFD")):
+        return "fx"
+    if any(w in kw for w in ("NISA", "つみたて", "積立", "投資信託", "株", "銘柄", "証券",
+                             "配当", "米国株", "ETF", "ロボアド", "iDeCo", "IPO", "純金")):
+        return "stock"
+    if any(w in kw for w in ("勉強", "スクール", "セミナー", "教養", "学ぶ", "独学")):
+        return "learn"
+    return "default"
+
+
+def _affiliate_cta_of(name):
+    """案件名から読み取れる事実に基づいてCTA文言を決める。
+    全案件に「【公式】無料口座開設はこちら」を固定で付けていたのが誤り
+    （不動産投資の面談やVPSに「口座開設」は事実に反する）。"""
+    if any(w in name for w in ("VPS", "デスクトップ")):
+        return "【公式】サービス詳細はこちら"
+    if "メルマガ" in name:
+        return "【公式】無料メルマガ登録はこちら"
+    if any(w in name for w in ("スクール", "アカデミー", "セミナー", "教養")):
+        return "【公式】無料体験・資料請求はこちら"
+    if any(w in name for w in ("相談", "面談", "資料請求", "査定", "買取", "見積", "仲介",
+                               "リノベーション", "比較・紹介", "紹介", "一括比較", "管理",
+                               "空室対策", "動画視聴", "代行")):
+        return "【公式】無料相談・資料請求はこちら"
+    return "【公式】無料口座開設はこちら"
+
+
+_AFF_HEADINGS = {
+    "fx": "でおすすめのFX口座はこちら",
+    "stock": "でおすすめの証券口座はこちら",
+    "realestate": "で人気の不動産投資サービスはこちら",
+    "learn": "で人気の投資スクール・証券口座はこちら",
+    "default": "でおすすめのFX・証券口座はこちら",
+}
+
+
+def _affiliate_pool_for(cat, by_cat):
+    """KWカテゴリに対する (主プール, 補完プール) を返す。
+    主プールから優先的に抽選し、主プールが3件に満たないときだけ補完プールで埋める。
+    主従を分けずに連結して一様抽選すると、案件数の多いFX(14件)が証券記事(6件)を数で押し流し、
+    「配当金 生活」の記事のCTAが3件中2件FX口座になる（実測）。"""
+    if cat == "fx":
+        return by_cat.get("fx", []), by_cat.get("stock", [])
+    if cat == "stock":
+        return by_cat.get("stock", []), by_cat.get("fx", [])
+    if cat == "realestate":
+        return by_cat.get("realestate", []), by_cat.get("property", [])
+    if cat == "learn":
+        # schoolは3件しかなく、school単独を主にすると記事内2箇所のCTAが毎回同じ3件で並ぶ
+        # （実測: 重複3.00/3）。学習記事は証券口座とも文脈が繋がるため主プールに含める。
+        return by_cat.get("school", []) + by_cat.get("stock", []), by_cat.get("fx", [])
+    # default＝FX・証券のみ（本サイトの主軸。無関係案件を構造的に排除）
+    return by_cat.get("fx", []) + by_cat.get("stock", []), []
+
+
 def make_affiliate_html(kw):
-    items = random.sample(list(AFFILIATE_LINKS.items()), min(3, len(AFFILIATE_LINKS)))
+    """記事KWに文脈一致する案件のみを抽選する。
+    既定プール（default）は本サイトの主軸であるFX・証券口座のみ。不動産の実物売買/工事/権利系
+    （property）とスクール（school）は該当KWのときだけ出し、excluded はどこにも出さない。"""
+    cat = _detect_kw_category(kw)
+    by_cat = {}
+    for name in AFFILIATE_LINKS:
+        by_cat.setdefault(_affiliate_category_of(name), []).append(name)
+    main, supp = _affiliate_pool_for(cat, by_cat)
+    main = list(main)
+    supp = [n for n in supp if n not in set(main)]
+    random.shuffle(main)
+    random.shuffle(supp)
+    ordered = main + supp
+    if not ordered:  # フォールバック（万一空でも excluded は混ぜない）
+        ordered = [n for n in AFFILIATE_LINKS
+                   if _affiliate_category_of(n) != "excluded"]
+        random.shuffle(ordered)
+    pick = ordered[:3]
+    heading = _AFF_HEADINGS.get(cat, _AFF_HEADINGS["default"])
     html = '<div style="background:#f8f4e0;padding:20px;margin:20px 0;border-radius:8px;border-left:4px solid #d4af37;">'
-    html += f'<p style="font-weight:bold;font-size:16px;">▼ {kw}でおすすめのFX・証券口座はこちら</p>'
-    for name, url in items:
-        html += f'<p>✅ <a href="{url}" target="_blank" rel="nofollow" style="color:#b8860b;font-weight:bold;">{name}【公式】無料口座開設はこちら</a></p>'
+    html += f'<p style="font-weight:bold;font-size:16px;">▼ {kw}{heading}</p>'
+    for name in pick:
+        url = AFFILIATE_LINKS[name]
+        html += f'<p>✅ <a href="{url}" target="_blank" rel="nofollow" style="color:#b8860b;font-weight:bold;">{name}{_affiliate_cta_of(name)}</a></p>'
     html += '</div>'
     return html
 
