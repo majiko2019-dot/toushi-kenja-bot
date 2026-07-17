@@ -270,6 +270,8 @@ def _fetch_titles_by_status(status):
                 break
             offset += 100
     except Exception as e:
+        global _TITLE_FETCH_FAILED
+        _TITLE_FETCH_FAILED = True
         print(f"[WARN] {status}投稿のタイトル取得失敗: {e}")
     return titles
 
@@ -299,15 +301,36 @@ def _fetch_queued_titles():
     return titles
 
 
+class TitleFetchError(RuntimeError):
+    """既存タイトルの取得に失敗したことを表す。重複判定ができない＝投稿してはいけない。"""
+
+
+_TITLE_FETCH_FAILED = False
+
+
 _KNOWN_TITLES_CACHE = None
 
 
 def _all_known_titles():
-    """公開済み＋予約キューの全タイトル（1実行内でキャッシュ）"""
+    """公開済み＋予約キューの全タイトル（1実行内でキャッシュ）。
+
+    取得に1つでも失敗したら例外を投げて投稿を止める。照合対象が欠けたまま選ぶと
+    全KWが「未投稿」扱いになり、実質ランダム選択＝重複記事の量産に逆戻りするため。
+    2026-07-17 card の本番runで xmlrpc.php への接続が全滅し「公開0本 + 予約/下書き0本 = 0本」
+    →「未投稿キーワードから選択（候補 62/62）」が実際に発生した（画像アップロードも落ちたため
+    投稿には至らなかったが、画像が通っていれば重複記事が生まれていた）。
+    接続不良は一時的なことが多いので、黙ってスキップせず例外で落とす。そうすればワークフローが
+    failure になり、失敗アラートが飛んで代表が気づける（正常な枯渇＝SKIP-DUP とは区別する）。
+    """
     global _KNOWN_TITLES_CACHE
     if _KNOWN_TITLES_CACHE is None:
         published = _fetch_existing_titles()
         queued = _fetch_queued_titles()
+        if _TITLE_FETCH_FAILED:
+            raise TitleFetchError(
+                "既存タイトルの取得に失敗したため重複判定ができません。"
+                "照合せずに投稿すると重複記事を量産するため中止します。"
+                "（WordPressへの接続不良の可能性。時間をおいて再実行してください）")
         _KNOWN_TITLES_CACHE = published + queued
         print(f"[INFO] 重複判定の照合対象: 公開{len(published)}本 + 予約/下書き{len(queued)}本 = {len(_KNOWN_TITLES_CACHE)}本")
     return _KNOWN_TITLES_CACHE
